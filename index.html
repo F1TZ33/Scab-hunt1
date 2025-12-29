@@ -12,25 +12,6 @@ body {
   padding:20px;
 }
 
-/* ===== TOP NAV ===== */
-.top-nav {
-  max-width:900px;
-  margin:0 auto 14px auto;
-  display:flex;
-  justify-content:flex-end;
-}
-.top-nav a {
-  text-decoration:none;
-  font-weight:600;
-  color:#2563eb;
-  background:#eef2ff;
-  padding:8px 14px;
-  border-radius:10px;
-}
-.top-nav a:hover {
-  background:#e0e7ff;
-}
-
 .card {
   max-width:900px;
   margin:auto;
@@ -51,6 +32,12 @@ button.primary {
   background:#2ecc71;
   color:white;
   margin-top:14px;
+}
+
+button.secondary {
+  background:#2563eb;
+  color:white;
+  margin:12px 0 18px 0;
 }
 
 input {
@@ -100,17 +87,12 @@ input {
 .qr-label { font-weight:bold; margin-bottom:6px; }
 
 @media print {
-  button, .search, .top-nav { display:none; }
+  button, .search { display:none; }
 }
 </style>
 </head>
 
 <body>
-
-<!-- ===== CREATE HUNT LINK ===== -->
-<div class="top-nav">
-  <a href="create-hunt.html">➕ Create New Hunt</a>
-</div>
 
 <div class="card" id="app"></div>
 
@@ -206,7 +188,13 @@ else home();
 function home(){
   app.innerHTML = `
     <h1>Scavenger Hunts</h1>
+
     <input class="search" placeholder="Search hunts...">
+
+    <button class="secondary" onclick="location='create-hunt.html'">
+      ➕ Create New Hunt
+    </button>
+
     ${hunts.map(h=>`
       <div class="hunt-card">
         <strong>${h.name} (${h.steps.length} steps)</strong><br><br>
