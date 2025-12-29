@@ -2,247 +2,224 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Create New Hunt</title>
+<title>Create Scavenger Hunt</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body {
-  font-family: system-ui, sans-serif;
-  background: linear-gradient(180deg,#eef2f7,#f4f6f8);
+body{
+  font-family:system-ui,sans-serif;
+  background:linear-gradient(180deg,#eef2f7,#f4f6f8);
   padding:20px;
 }
-
-.card {
+.card{
   max-width:900px;
   margin:auto;
   background:#fff;
   padding:24px;
   border-radius:14px;
 }
-
-h1 { margin-top:0; }
-
-label {
-  font-weight:600;
-  display:block;
-  margin-top:18px;
-}
-
-select, textarea, input {
+h1,h2{margin-top:0}
+select,textarea,input{
   width:100%;
-  padding:14px;
+  padding:12px;
   font-size:16px;
   margin-top:8px;
-  border-radius:8px;
-  border:1px solid #ccc;
 }
-
-button {
-  padding:12px 16px;
-  font-size:16px;
-  border-radius:8px;
+textarea{min-height:80px}
+button{
+  padding:10px 14px;
+  font-size:15px;
   border:none;
+  border-radius:8px;
   cursor:pointer;
 }
+.primary{background:#2ecc71;color:white}
+.secondary{background:#3498db;color:white}
+.ghost{background:#e5e7eb}
 
-button.primary {
-  background:#2ecc71;
-  color:white;
-  margin-top:16px;
-}
-
-button.secondary {
-  background:#3498db;
-  color:white;
-  margin-top:12px;
-}
-
-.mode-toggle {
-  display:flex;
-  gap:12px;
-  margin-top:10px;
-}
-
-.mode-toggle button {
-  flex:1;
-  background:#f0f3f6;
-}
-
-.mode-toggle button.active {
-  background:#3498db;
-  color:white;
-}
-
-.clue-list {
-  margin-top:24px;
-}
-
-.clue-card {
+.clue-card{
   background:#f8fafc;
   border-radius:12px;
   padding:16px;
-  margin-bottom:12px;
-  transition:transform 0.2s ease, opacity 0.2s ease;
+  margin-bottom:16px;
+  transition:transform .2s ease,opacity .2s ease;
 }
-
-.clue-header {
+.clue-header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  margin-bottom:8px;
 }
-
-.step {
+.clue-number{
   font-weight:700;
 }
+.controls button{margin-left:6px}
 
-.controls button {
-  margin-left:6px;
+.mode-select{margin-top:10px}
+.ai-box{
+  background:#eef6ff;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
 }
-
-.badge {
-  font-size:12px;
-  background:#e1e8ed;
-  padding:4px 8px;
-  border-radius:999px;
+.ai-suggestion{
+  background:white;
+  padding:10px;
+  border-radius:8px;
+  margin-bottom:8px;
 }
+.ai-suggestion button{margin-right:6px}
+.hidden{display:none}
 </style>
 </head>
 
 <body>
 
 <div class="card">
-  <h1>Create New Scavenger Hunt</h1>
+<h1>Create a New Hunt</h1>
 
-  <label>Hunt Name</label>
-  <input placeholder="Enter hunt name">
+<label><strong>Theme</strong></label>
+<select id="theme">
+  <option>Escape Adventure</option>
+  <option>Fortnite IRL</option>
+  <option>Hacker / System Breach</option>
+  <option>Fantasy Quest</option>
+  <option>Pirate</option>
+  <option>Detective</option>
+  <option>Custom</option>
+</select>
 
-  <label>Theme</label>
-  <select>
-    <option>Escape</option>
-    <option>Fortnite</option>
-    <option>Hacker</option>
-    <option>Neutral</option>
-    <option>Custom</option>
-  </select>
+<hr>
 
-  <label>Add a Clue</label>
-  <div class="mode-toggle">
-    <button id="useExisting" class="active">Use Existing Clue</button>
-    <button id="useCustom">Write My Own</button>
-  </div>
+<div id="clues"></div>
 
-  <div id="existingPanel">
-    <label>Select Hunt</label>
-    <select id="huntSelect"></select>
-
-    <label>Select Clue</label>
-    <select id="clueSelect"></select>
-  </div>
-
-  <div id="customPanel" style="display:none">
-    <label>Clue Text</label>
-    <textarea rows="3" placeholder="Write your clue here..."></textarea>
-  </div>
-
-  <button class="secondary" onclick="addClue()">➕ Add Clue</button>
-
-  <div class="clue-list" id="clueList"></div>
-
-  <button class="primary" disabled>💾 Save Hunt (disabled for UI testing)</button>
+<button class="secondary" onclick="addClue()">➕ Add Clue</button>
 </div>
 
 <script>
-/* ===== LOAD EXISTING HUNTS (READ ONLY) ===== */
-const hunts = JSON.parse(localStorage.getItem("hunts") || "[]");
+let clueCount = 0;
 
-const huntSelect = document.getElementById("huntSelect");
-const clueSelect = document.getElementById("clueSelect");
-
-hunts.forEach((h,i)=>{
-  const opt = document.createElement("option");
-  opt.value = i;
-  opt.textContent = h.name;
-  huntSelect.appendChild(opt);
-});
-
-function populateClues(){
-  clueSelect.innerHTML = "";
-  const h = hunts[huntSelect.value];
-  if(!h) return;
-  h.steps.forEach((s,i)=>{
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = s.clue;
-    clueSelect.appendChild(opt);
-  });
-}
-huntSelect.addEventListener("change", populateClues);
-populateClues();
-
-/* ===== MODE TOGGLE ===== */
-const useExisting = document.getElementById("useExisting");
-const useCustom = document.getElementById("useCustom");
-const existingPanel = document.getElementById("existingPanel");
-const customPanel = document.getElementById("customPanel");
-
-useExisting.onclick = ()=>{
-  useExisting.classList.add("active");
-  useCustom.classList.remove("active");
-  existingPanel.style.display="block";
-  customPanel.style.display="none";
-};
-
-useCustom.onclick = ()=>{
-  useCustom.classList.add("active");
-  useExisting.classList.remove("active");
-  existingPanel.style.display="none";
-  customPanel.style.display="block";
-};
-
-/* ===== CLUE LIST ===== */
-const clueList = document.getElementById("clueList");
-let clues = [];
-
-function render(){
-  clueList.innerHTML = "";
-  clues.forEach((c,i)=>{
-    const div = document.createElement("div");
-    div.className="clue-card";
-    div.innerHTML = `
-      <div class="clue-header">
-        <div class="step">Step ${i+1}</div>
-        <div class="controls">
-          <button onclick="move(${i},-1)" ${i===0?"disabled":""}>⬆️</button>
-          <button onclick="move(${i},1)" ${i===clues.length-1?"disabled":""}>⬇️</button>
-        </div>
-      </div>
-      <div>${c.text}</div>
-      <div class="badge">${c.source}</div>
-    `;
-    clueList.appendChild(div);
-  });
-}
+const BASE_HUNTS = [
+  {name:"Escape the House", clues:["Mirror","Bookshelf","Fridge"]},
+  {name:"Fortnite IRL", clues:["Gaming Desk","Fridge","Garage"]},
+  {name:"System Breach", clues:["Router","Keyboard","Desk"]}
+];
 
 function addClue(){
-  if(useExisting.classList.contains("active")){
-    const h = hunts[huntSelect.value];
-    const s = h.steps[clueSelect.value];
-    clues.push({ text:s.clue, source:`From "${h.name}"` });
-  } else {
-    const t = customPanel.querySelector("textarea").value.trim();
-    if(!t) return;
-    clues.push({ text:t, source:"Custom" });
-    customPanel.querySelector("textarea").value="";
-  }
-  render();
+  clueCount++;
+  const div=document.createElement("div");
+  div.className="clue-card";
+  div.innerHTML=`
+    <div class="clue-header">
+      <div class="clue-number">Clue ${clueCount}</div>
+      <div class="controls">
+        <button class="ghost" onclick="moveUp(this)">⬆</button>
+        <button class="ghost" onclick="moveDown(this)">⬇</button>
+      </div>
+    </div>
+
+    <div class="mode-select">
+      <label><strong>Clue Source</strong></label>
+      <select onchange="switchMode(this)">
+        <option value="existing">Use existing clue</option>
+        <option value="write">Write my own</option>
+        <option value="ai">Get AI help ✨</option>
+      </select>
+    </div>
+
+    <div class="mode existing">
+      <select onchange="populateClues(this)">
+        <option>Select hunt</option>
+        ${BASE_HUNTS.map(h=>`<option>${h.name}</option>`).join("")}
+      </select>
+      <select class="clue-list">
+        <option>Select clue</option>
+      </select>
+    </div>
+
+    <div class="mode write hidden">
+      <textarea placeholder="Write your clue here..."></textarea>
+    </div>
+
+    <div class="mode ai hidden">
+      <input placeholder="Location (e.g. Fridge)">
+      <button class="secondary" onclick="mockAI(this)">✨ Get Suggestions</button>
+      <div class="ai-box hidden"></div>
+    </div>
+  `;
+  document.getElementById("clues").appendChild(div);
+  renumber();
 }
 
-function move(i,dir){
-  const target = i + dir;
-  if(target<0 || target>=clues.length) return;
-  [clues[i], clues[target]] = [clues[target], clues[i]];
-  render();
+function switchMode(sel){
+  const card=sel.closest(".clue-card");
+  card.querySelectorAll(".mode").forEach(m=>m.classList.add("hidden"));
+  card.querySelector(".mode."+sel.value).classList.remove("hidden");
+}
+
+function populateClues(sel){
+  const hunt=BASE_HUNTS.find(h=>h.name===sel.value);
+  const list=sel.parentElement.querySelector(".clue-list");
+  list.innerHTML="<option>Select clue</option>";
+  if(hunt){
+    hunt.clues.forEach(c=>{
+      const o=document.createElement("option");
+      o.textContent=c;
+      list.appendChild(o);
+    });
+  }
+}
+
+function mockAI(btn){
+  const box=btn.nextElementSibling;
+  box.classList.remove("hidden");
+  box.innerHTML="";
+  const theme=document.getElementById("theme").value;
+  ["First","Second","Third"].forEach(t=>{
+    const d=document.createElement("div");
+    d.className="ai-suggestion";
+    d.innerHTML=`
+      <div><strong>${theme}:</strong> ${t} themed clue suggestion</div>
+      <button class="primary" onclick="acceptAI(this)">Accept</button>
+      <button class="ghost" onclick="editAI(this)">Edit</button>
+      <button class="ghost" onclick="this.parentElement.remove()">Discard</button>
+    `;
+    box.appendChild(d);
+  });
+}
+
+function acceptAI(btn){
+  const text=btn.parentElement.querySelector("div").textContent;
+  const card=btn.closest(".clue-card");
+  card.querySelector(".mode.ai").innerHTML=
+    `<textarea>${text}</textarea>`;
+}
+
+function editAI(btn){
+  const text=btn.parentElement.querySelector("div").textContent;
+  const card=btn.closest(".clue-card");
+  card.querySelector(".mode.ai").innerHTML=
+    `<textarea>${text}</textarea>`;
+}
+
+function moveUp(btn){
+  const card=btn.closest(".clue-card");
+  if(card.previousElementSibling){
+    card.parentElement.insertBefore(card,card.previousElementSibling);
+    renumber();
+  }
+}
+function moveDown(btn){
+  const card=btn.closest(".clue-card");
+  if(card.nextElementSibling){
+    card.parentElement.insertBefore(card.nextElementSibling,card);
+    renumber();
+  }
+}
+
+function renumber(){
+  document.querySelectorAll(".clue-card").forEach((c,i)=>{
+    c.querySelector(".clue-number").textContent="Clue "+(i+1);
+  });
 }
 </script>
 
