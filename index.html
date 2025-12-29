@@ -11,14 +11,19 @@ body { font-family: system-ui, sans-serif; background:#f4f6f8; padding:20px; }
 .hunt { border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px; }
 button { margin:6px 6px 6px 0; padding:8px 14px; }
 input, textarea { width:100%; padding:8px; margin-bottom:10px; }
+
+.qr { margin:10px 0; }
+
 .overlay {
   position:fixed; inset:0; background:rgba(0,0,0,.6);
   display:none; align-items:center; justify-content:center;
   color:#fff; font-size:24px; z-index:999;
 }
+
+.pagebreak { page-break-before: always; }
+
 @media print {
   button { display:none; }
-  .pagebreak { page-break-before: always; }
 }
 </style>
 </head>
@@ -30,200 +35,129 @@ input, textarea { width:100%; padding:8px; margin-bottom:10px; }
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
 <script>
-/* ================= UTIL ================= */
+/* ========= UTIL ========= */
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function nowStamp(){
-  const d=new Date();
-  return d.toISOString().replace(/[:T]/g,"-").slice(0,16);
+  return new Date().toISOString().replace(/[:T]/g,"-").slice(0,16);
 }
 
-/* ================= DEFAULT HUNTS ================= */
+/* ========= DEFAULT HUNTS ========= */
 const DEFAULT_HUNTS = {
-  escape: {
-    name:"Escape the House (10)",
-    intro:"Welcome! Your escape challenge begins now 🏠",
-    clues:[
-      {clue:"I show your face but I’m not a photo.", keyword:"mirror"},
-      {clue:"I have pages but no homework.", keyword:"bookshelf"},
-      {clue:"I open wide but never talk.", keyword:"fridge"},
-      {clue:"I go round and round but never get dizzy.", keyword:"washing machine"},
-      {clue:"I have hands but no arms.", keyword:"clock"},
-      {clue:"I hide your feet when you’re not home.", keyword:"shoe rack"},
-      {clue:"I’m soft, I’m comfy, and I steal naps.", keyword:"couch"},
-      {clue:"I light up the dark but disappear by day.", keyword:"lamp"},
-      {clue:"I’m full of secrets, but I don’t talk.", keyword:"bedroom door"},
-      {clue:"Final key retrieved. Your colour is RED.", keyword:"red"}
-    ],
-    finish:"🎉 Congratulations! You escaped the house!"
-  }
+
+escape:{
+name:"Escape the House (10)",
+intro:"Welcome! Your escape challenge begins now 🏠",
+clues:[
+{clue:"I show your face but I’m not a photo.", keyword:"mirror"},
+{clue:"I have pages but no homework.", keyword:"bookshelf"},
+{clue:"I open wide but never talk.", keyword:"fridge"},
+{clue:"I go round and round but never get dizzy.", keyword:"washing machine"},
+{clue:"I have hands but no arms.", keyword:"clock"},
+{clue:"I hide your feet when you’re not home.", keyword:"shoe rack"},
+{clue:"I’m soft, I’m comfy, and I steal naps.", keyword:"couch"},
+{clue:"I light up the dark but disappear by day.", keyword:"lamp"},
+{clue:"I’m full of secrets, but I don’t talk.", keyword:"bedroom door"},
+{clue:"You cracked every lock! Your colour is RED.", keyword:"red"}
+],
+finish:"🎉 Congratulations! You escaped the house!"
+},
+
+fortnite:{
+name:"Fortnite IRL (12)",
+intro:"You’ve dropped in… the hunt begins! 🪂",
+clues:[
+{clue:"Where controllers go when the game is off.", keyword:"gaming desk"},
+{clue:"Where drinks recharge HP.", keyword:"fridge"},
+{clue:"Where shoes hide from the storm.", keyword:"entrance"},
+{clue:"Where tools live.", keyword:"garage"},
+{clue:"Where everyone chills.", keyword:"lounge room"},
+{clue:"You can’t win without sleep.", keyword:"bed"},
+{clue:"Secrets behind closed doors.", keyword:"wardrobe"},
+{clue:"Where devices recharge.", keyword:"phone charger"},
+{clue:"High ground wins games.", keyword:"stairs"},
+{clue:"Battles are watched, not played.", keyword:"tv"},
+{clue:"Where snacks disappear.", keyword:"pantry"},
+{clue:"VICTORY ROYALE 🏆 Your colour is SILVER.", keyword:"silver"}
+],
+finish:"🏆 Victory Royale achieved!"
+},
+
+hacker:{
+name:"System Breach (15)",
+intro:"SYSTEM ONLINE. Initialising hunt… 💻",
+clues:[
+{clue:"Device that controls all others.", keyword:"router"},
+{clue:"Passwords written but never digital.", keyword:"notebook"},
+{clue:"Cold data storage.", keyword:"fridge"},
+{clue:"Commands typed, not spoken.", keyword:"keyboard"},
+{clue:"One click can change everything.", keyword:"mouse"},
+{clue:"Without this, the system fails.", keyword:"power board"},
+{clue:"Clothes reset to default state.", keyword:"laundry"},
+{clue:"Backup location.", keyword:"garage"},
+{clue:"Pixels form reality here.", keyword:"monitor"},
+{clue:"Entry requires permission.", keyword:"door"},
+{clue:"Locked, hidden, not obvious.", keyword:"drawer"},
+{clue:"Tracks everything over time.", keyword:"clock"},
+{clue:"Operator rest zone.", keyword:"bed"},
+{clue:"Admin-only access node.", keyword:"desk"},
+{clue:"ROOT ACCESS GRANTED. Your colour is GREEN.", keyword:"green"}
+],
+finish:"✅ System breached successfully."
+}
+
 };
 
-/* ================= STATE ================= */
+/* ========= STATE ========= */
 let userHunts = JSON.parse(localStorage.getItem("userHunts")||"{}");
-let HUNTS = {...DEFAULT_HUNTS,...userHunts};
+let HUNTS = {...DEFAULT_HUNTS, ...userHunts};
 function save(){ localStorage.setItem("userHunts",JSON.stringify(userHunts)); }
 
 const q = new URLSearchParams(location.search);
 const app = document.getElementById("app");
 
-/* ================= ROUTER ================= */
-if(q.get("duplicate")) duplicateHunt(q.get("duplicate"));
-else if(q.get("play")) play();
-else if(q.get("print")) printPage(q.get("print"));
-else if(q.get("edit")) editHunt(q.get("edit"));
-else if(q.get("new")) editHunt();
+/* ========= ROUTER ========= */
+if(q.get("print")) printPage(q.get("print"));
 else home();
 
-/* ================= HOME ================= */
+/* ========= HOME ========= */
 function home(){
-  app.innerHTML=`
-    <h1>Scavenger Hunts</h1>
-    <button onclick="location='?new=1'">➕ Create New Hunt</button>
-    ${Object.entries(HUNTS).map(([k,h])=>`
-      <div class="hunt">
-        <h3>${h.name}</h3>
-        <button onclick="location='?print=${k}'">🖨 Print</button>
-        <button onclick="location='?edit=${k}'">✏ Edit</button>
-        <button onclick="location='?duplicate=${k}'">📄 Duplicate</button>
-        <button onclick="location='?play=${k}&s=0'">▶ Start</button>
-      </div>
-    `).join("")}
-  `;
+app.innerHTML=`
+<h1>Scavenger Hunts</h1>
+${Object.entries(HUNTS).map(([k,h])=>`
+<div class="hunt">
+<h3>${h.name}</h3>
+<button onclick="location='?print=${k}'">🖨 Print</button>
+</div>`).join("")}`;
 }
 
-/* ================= DUPLICATE (ONE-SHOT) ================= */
-function duplicateHunt(key){
-  const flag = "duplicate_done_"+key;
-  if(sessionStorage.getItem(flag)){
-    history.replaceState({}, "", location.pathname);
-    return home();
-  }
-
-  const original = HUNTS[key];
-  if(!original) return home();
-
-  const newKey = uid();
-  const copy = JSON.parse(JSON.stringify(original));
-  copy.name += " COPY " + nowStamp();
-
-  userHunts[newKey]=copy;
-  HUNTS[newKey]=copy;
-  save();
-
-  sessionStorage.setItem(flag,"1");
-  history.replaceState({}, "", location.pathname);
-  home();
-}
-
-/* ================= CREATE / EDIT ================= */
-function editHunt(key){
-  const h = key ? HUNTS[key] : {name:"",intro:"",clues:[],finish:""};
-  app.innerHTML=`
-    <h2>${key?"Edit":"Create"} Hunt</h2>
-    <input id="name" value="${h.name}" placeholder="Name">
-    <textarea id="intro" placeholder="Intro">${h.intro}</textarea>
-    <div id="clues"></div>
-    <button onclick="addClue()">➕ Add Clue</button>
-    <textarea id="finish" placeholder="Finish">${h.finish}</textarea>
-    <button onclick="saveHunt('${key||""}')">💾 Save</button>
-    <button onclick="home()">Cancel</button>
-  `;
-  h.clues.forEach(c=>addClue(c.clue,c.keyword));
-}
-
-function addClue(clue="",keyword=""){
-  const d=document.createElement("div");
-  d.className="clue-item";
-  d.innerHTML=`
-    <textarea placeholder="Clue">${clue}</textarea>
-    <input placeholder="Keyword" value="${keyword}">
-  `;
-  document.getElementById("clues").appendChild(d);
-}
-
-function saveHunt(key){
-  const name=document.getElementById("name").value.trim();
-  const intro=document.getElementById("intro").value.trim();
-  const finish=document.getElementById("finish").value.trim();
-  const clues=[...document.querySelectorAll(".clue-item")]
-    .map(d=>({
-      clue:d.querySelector("textarea").value.trim(),
-      keyword:d.querySelector("input").value.trim().toLowerCase()
-    }))
-    .filter(c=>c.clue&&c.keyword);
-
-  if(!name||!intro||!finish||!clues.length) return alert("All fields required");
-
-  if(!key) key=uid();
-  userHunts[key]={name,intro,clues,finish};
-  HUNTS[key]=userHunts[key];
-  save();
-  home();
-}
-
-/* ================= PLAY ================= */
-function play(){
-  const key=q.get("play");
-  const step=parseInt(q.get("s")||0);
-  const h=HUNTS[key];
-  if(!h) return home();
-
-  if(step===0) return show(h.intro,null,key,1);
-  if(step<=h.clues.length){
-    const c=h.clues[step-1];
-    return show(c.clue,c.keyword,key,step+1);
-  }
-  show(h.finish,null,key,null);
-}
-
-function show(text,keyword,key,next){
-  app.innerHTML=`
-    <p>${text}</p>
-    ${keyword?`
-      <input id="ans">
-      <button onclick="check('${keyword}','${key}',${next})">Submit</button>
-    `:""}
-  `;
-}
-
-function check(k,key,next){
-  const v=document.getElementById("ans").value.trim().toLowerCase();
-  if(v===k){
-    location=`?play=${key}&s=${next}`;
-  }else{
-    overlay.style.display="flex";
-    setTimeout(()=>overlay.style.display="none",1500);
-  }
-}
-
-/* ================= PRINT ================= */
+/* ========= PRINT ========= */
 function printPage(key){
-  const h=HUNTS[key];
-  app.innerHTML=`
-    <h2>${h.name} – Instructions</h2>
-    ${h.clues.map((c,i)=>`
-      <p><strong>Clue ${i+1}:</strong> ${c.clue}</p>
-      <p><strong>Answer:</strong> ${c.keyword}</p>
-      <p>Parent Notes:</p><br><br>
-    `).join("")}
+const h = HUNTS[key];
+app.innerHTML = `
+<h2>${h.name} – Parent Instructions</h2>
 
-    <div class="pagebreak"></div>
-    <h2>QR Code Cut-Out Sheet</h2>
-    ${h.clues.map((c,i)=>`
-      <div>
-        <p><strong>${c.keyword}</strong></p>
-        <canvas id="qr${i}"></canvas>
-      </div>
-    `).join("")}
-  `;
+${h.clues.map((c,i)=>`
+<p><strong>Clue ${i+1}:</strong> ${c.clue}</p>
+<p><strong>Answer:</strong> ${c.keyword}</p>
+<div class="qr"><canvas id="pqr${i}"></canvas></div>
+<p><em>Parent Notes:</em></p><br><br>
+`).join("")}
 
-  h.clues.forEach((c,i)=>{
-    QRCode.toCanvas(
-      document.getElementById("qr"+i),
-      c.keyword,
-      {width:120}
-    );
-  });
+<div class="pagebreak"></div>
+
+<h2>QR Code Cut-Out Sheet</h2>
+${h.clues.map((c,i)=>`
+<div class="qr">
+<p><strong>${c.keyword}</strong></p>
+<canvas id="cqr${i}"></canvas>
+</div>
+`).join("")}
+`;
+
+h.clues.forEach((c,i)=>{
+QRCode.toCanvas(document.getElementById("pqr"+i), c.keyword, {width:100});
+QRCode.toCanvas(document.getElementById("cqr"+i), c.keyword, {width:120});
+});
 }
 </script>
 </body>
