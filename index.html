@@ -2,24 +2,44 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Scavenger Hunt Manager</title>
+<title>Scavenger Hunt</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body { font-family: system-ui, sans-serif; background:#f4f6f8; padding:20px; }
 .card { max-width: 900px; margin:auto; background:#fff; padding:20px; border-radius:12px; }
 .hunt { border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px; }
-button { padding:8px 14px; margin:4px; }
+button { padding:12px 18px; margin:6px 0; font-size:16px; }
 textarea, input { width:100%; padding:8px; margin:6px 0; }
 hr { margin:20px 0; }
+
 .print-clue { margin-bottom:30px; page-break-inside:avoid; }
 .qr { margin:10px 0; }
 .note-box { border:1px dashed #999; height:60px; }
+
+.cutout-page { page-break-before: always; }
+.cutout-item {
+  display:inline-block;
+  width:45%;
+  margin:10px 2%;
+  text-align:center;
+  page-break-inside:avoid;
+  border:1px dashed #bbb;
+  padding:10px;
+}
+
+.start-box {
+  text-align:center;
+  font-size:18px;
+}
+.start-box h1 { font-size:32px; }
+
 .overlay {
   position:fixed; inset:0;
   background:rgba(0,0,0,.6);
   display:none; align-items:center; justify-content:center;
   color:white; font-size:24px; z-index:999;
 }
+
 @media print {
   button { display:none; }
   body { background:white; }
@@ -32,75 +52,73 @@ hr { margin:20px 0; }
 <div class="overlay" id="overlay">❌ Wrong Code — Try Again</div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-
 <script>
 const app = document.getElementById("app");
 const q = new URLSearchParams(location.search);
 
-/* ---------- UTIL ---------- */
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function code6(){ return Math.floor(100000 + Math.random()*900000).toString(); }
 function save(){ localStorage.setItem("hunts", JSON.stringify(HUNTS)); }
 
 /* ---------- DEFAULT HUNTS ---------- */
 const DEFAULTS = {
-  escape: {
+  escape:{
     name:"Escape the House",
     intro:"Welcome! Your escape challenge begins now 🏠",
     clues:[
-      { clue:"I show your face but I’m not a photo.", location:"mirror" },
-      { clue:"I have pages but no homework.", location:"bookshelf" },
-      { clue:"I open wide but never talk.", location:"fridge" },
-      { clue:"I go round and round but never get dizzy.", location:"washing machine" },
-      { clue:"I have hands but no arms.", location:"clock" },
-      { clue:"I hide your feet when you’re not home.", location:"shoe rack" },
-      { clue:"I’m soft, comfy, and steal naps.", location:"couch" },
-      { clue:"I light the dark but vanish by day.", location:"lamp" },
-      { clue:"I’m full of secrets, you knock first.", location:"bedroom door" },
-      { clue:"Final key — your colour is RED", location:"red" }
+      { clue:"I show your face but I’m not a photo.", location:"Mirror" },
+      { clue:"I have pages but no homework.", location:"Bookshelf" },
+      { clue:"I open wide but never talk.", location:"Fridge" },
+      { clue:"I go round and round but never get dizzy.", location:"Washing Machine" },
+      { clue:"I have hands but no arms.", location:"Clock" },
+      { clue:"I hide your feet when you’re not home.", location:"Shoe Rack" },
+      { clue:"I’m soft, comfy, and steal naps.", location:"Couch" },
+      { clue:"I light the dark but vanish by day.", location:"Lamp" },
+      { clue:"I’m full of secrets, you knock first.", location:"Bedroom Door" },
+      { clue:"Final key — your colour is RED", location:"RED" }
     ],
     finish:"🎉 Congratulations! You escaped!"
   },
 
-  fortnite: {
+  fortnite:{
     name:"Fortnite IRL",
     intro:"Drop in!",
     clues:[
-      { clue:"Where controllers rest.", location:"gaming desk" },
-      { clue:"Where drinks recharge HP.", location:"fridge" },
-      { clue:"Where shoes hide.", location:"entrance" },
-      { clue:"Where tools live.", location:"garage" },
-      { clue:"Family chill zone.", location:"lounge room" },
-      { clue:"You can’t win without sleep.", location:"bed" },
-      { clue:"Secrets behind doors.", location:"wardrobe" },
-      { clue:"Devices come back to life.", location:"phone charger" },
-      { clue:"High ground.", location:"stairs" },
-      { clue:"Battles are watched.", location:"tv" },
-      { clue:"Snacks vanish here.", location:"pantry" },
-      { clue:"Victory Royale — colour SILVER", location:"silver" }
+      { clue:"Where controllers rest.", location:"Gaming Desk" },
+      { clue:"Where drinks recharge HP.", location:"Fridge" },
+      { clue:"Where shoes hide.", location:"Entrance" },
+      { clue:"Where tools live.", location:"Garage" },
+      { clue:"Family chill zone.", location:"Lounge Room" },
+      { clue:"You can’t win without sleep.", location:"Bed" },
+      { clue:"Secrets behind doors.", location:"Wardrobe" },
+      { clue:"Devices come back to life.", location:"Phone Charger" },
+      { clue:"High ground.", location:"Stairs" },
+      { clue:"Battles are watched.", location:"TV" },
+      { clue:"Snacks vanish here.", location:"Pantry" },
+      { clue:"Victory Royale — colour SILVER", location:"SILVER" }
     ],
     finish:"🏆 VICTORY ROYALE!"
   },
 
-  hacker: {
+  hacker:{
     name:"System Breach",
     intro:"SYSTEM ONLINE",
     clues:[
-      { clue:"Controls all devices.", location:"router" },
-      { clue:"Passwords written.", location:"notebook" },
-      { clue:"Cold data storage.", location:"fridge" },
-      { clue:"Commands typed.", location:"keyboard" },
-      { clue:"One click changes all.", location:"mouse" },
-      { clue:"Without this, system fails.", location:"power board" },
-      { clue:"Clothes reset.", location:"laundry" },
-      { clue:"Stored just in case.", location:"garage" },
-      { clue:"Pixels form reality.", location:"monitor" },
-      { clue:"Permission required.", location:"door" },
-      { clue:"Locked storage.", location:"drawer" },
-      { clue:"Tracks time.", location:"clock" },
-      { clue:"User rests.", location:"bed" },
-      { clue:"Admin access.", location:"desk" },
-      { clue:"ROOT ACCESS — colour GREEN", location:"green" }
+      { clue:"Controls all devices.", location:"Router" },
+      { clue:"Passwords written.", location:"Notebook" },
+      { clue:"Cold data storage.", location:"Fridge" },
+      { clue:"Commands typed.", location:"Keyboard" },
+      { clue:"One click changes all.", location:"Mouse" },
+      { clue:"Without this, system fails.", location:"Power Board" },
+      { clue:"Clothes reset.", location:"Laundry" },
+      { clue:"Stored just in case.", location:"Garage" },
+      { clue:"Pixels form reality.", location:"Monitor" },
+      { clue:"Permission required.", location:"Door" },
+      { clue:"Locked storage.", location:"Drawer" },
+      { clue:"Tracks time.", location:"Clock" },
+      { clue:"User rests.", location:"Bed" },
+      { clue:"Admin access.", location:"Desk" },
+      { clue:"ROOT ACCESS — colour GREEN", location:"GREEN" }
     ],
     finish:"✅ SYSTEM BREACHED"
   }
@@ -115,44 +133,61 @@ if(!HUNTS){
     h.clues = h.clues.map(c=>({
       clue:c.clue,
       location:c.location,
-      code: code6()
+      code:code6()
     }));
-    h.locked = true;
     HUNTS[k] = h;
   }
   save();
 }
 
 /* ---------- ROUTER ---------- */
-if(q.get("play")) play();
+if(q.get("start")) startPage(q.get("start"));
+else if(q.get("play")) play();
 else if(q.get("print")) printPage(q.get("print"));
-else if(q.get("duplicate")) duplicate(q.get("duplicate"));
 else home();
+
+/* ---------- START PAGE ---------- */
+function startPage(k){
+  app.innerHTML = `
+    <div class="start-box">
+      <h1>🎉 Welcome, Explorer!</h1>
+      <p>You have been invited on a <strong>special scavenger hunt</strong>!</p>
+      <p>Around this place are <strong>hidden clues</strong> waiting to be found.<br>
+      Each clue will lead you to the next one.</p>
+
+      <p>When you find a clue, you might need to:</p>
+      <ul style="list-style:none;padding:0">
+        <li>👀 Look carefully</li>
+        <li>🧠 Think smart</li>
+        <li>📷 Scan a QR code</li>
+        <li>🔢 Type a secret number</li>
+      </ul>
+
+      <p>Don’t worry — there are <strong>no wrong turns</strong>, just keep trying!</p>
+      <button onclick="location='?play=${k}&s=1'">▶ Start the Hunt</button>
+    </div>
+  `;
+}
 
 /* ---------- HOME ---------- */
 function home(){
   app.innerHTML = `
     <h1>Scavenger Hunts</h1>
-    <button onclick="alert('New hunt creation can be enabled next')">➕ Create New Hunt</button>
-    <hr>
     ${Object.entries(HUNTS).map(([k,h])=>`
       <div class="hunt">
         <h3>${h.name}</h3>
-        <button onclick="location='?play=${k}&s=0'">▶ Start</button>
+        <button onclick="location='?start=${k}'">📱 Start QR</button>
         <button onclick="location='?print=${k}'">🖨 Print Instructions</button>
-        <button onclick="location='?duplicate=${k}'">📄 Duplicate</button>
       </div>
     `).join("")}
   `;
 }
 
-/* ---------- PLAY MODE ---------- */
+/* ---------- PLAY ---------- */
 function play(){
   const k = q.get("play");
   const h = HUNTS[k];
   const s = parseInt(q.get("s")||0);
-
-  if(s===0) return show(h.intro);
 
   if(s<=h.clues.length){
     const c = h.clues[s-1];
@@ -192,38 +227,31 @@ function printPage(k){
         <p>${c.clue}</p>
         <p><strong>Answer (Location):</strong> ${c.location}</p>
         <p><strong>Unlock Code:</strong> ${c.code}</p>
-        <div class="qr" id="qr-${i}"></div>
+        <div class="qr" id="qr-main-${i}"></div>
         <div class="note-box"></div>
       </div>
     `).join("")}
+
+    <div class="cutout-page">
+      <h2>Cut-Out QR Codes</h2>
+      ${h.clues.map((c,i)=>`
+        <div class="cutout-item">
+          <strong>Clue ${i+1}</strong><br>${c.location}
+          <div class="qr" id="qr-cut-${i}"></div>
+        </div>
+      `).join("")}
+    </div>
+
     <button onclick="print()">🖨 Print</button>
     <button onclick="home()">⬅ Back</button>
   `;
 
   h.clues.forEach((c,i)=>{
-    QRCode.toCanvas(document.createElement("canvas"), c.code, { width:120 }, (err,canvas)=>{
-      document.getElementById(`qr-${i}`).appendChild(canvas);
+    QRCode.toCanvas(document.createElement("canvas"), c.code, { width:120 }, (e,cv)=>{
+      document.getElementById(`qr-main-${i}`).appendChild(cv);
+      document.getElementById(`qr-cut-${i}`).appendChild(cv.cloneNode(true));
     });
   });
-}
-
-/* ---------- DUPLICATE ---------- */
-function duplicate(k){
-  const o = HUNTS[k];
-  const nk = uid();
-  HUNTS[nk] = {
-    name: o.name + " (Copy " + new Date().toLocaleString() + ")",
-    intro:o.intro,
-    finish:o.finish,
-    locked:true,
-    clues:o.clues.map(c=>({
-      clue:c.clue,
-      location:c.location,
-      code:code6()
-    }))
-  };
-  save();
-  home();
 }
 </script>
 </body>
