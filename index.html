@@ -86,6 +86,22 @@ input {
 .notes { border:1px dashed #aaa; height:40px; margin-top:6px; }
 .qr-label { font-weight:bold; margin-bottom:6px; }
 
+.print-intro {
+  text-align:center;
+  margin-top:60px;
+}
+.print-intro h1 {
+  font-size:36px;
+  margin-bottom:20px;
+}
+.print-intro p {
+  font-size:18px;
+  margin-bottom:20px;
+}
+.print-intro canvas {
+  margin-top:20px;
+}
+
 @media print {
   button, .search { display:none; }
 }
@@ -246,7 +262,7 @@ function play(){
 `;
 }
 
-/* ===== FIXED LINE (NO TEMPLATE LITERALS) ===== */
+/* ===== ANSWER CHECK ===== */
 function check(c,s){
   const v=document.getElementById("ans").value.trim();
   if(v===c){
@@ -264,7 +280,16 @@ function show(id){
 /* ================= PRINT ================= */
 function printPage(id){
   const h = hunts.find(x=>x.id===id);
+  const startLink = 'index.html?start=' + id;
+
   app.innerHTML = `
+<div class="print-page print-intro">
+  <h1>${h.name}</h1>
+  <p>Welcome! Scan the QR code below to begin this scavenger hunt.</p>
+  <p><strong>Players:</strong> Scan to start</p>
+  <canvas id="introQR"></canvas>
+</div>
+
 <h1>${h.name} – Parent Instructions</h1>
 
 <div class="print-page">
@@ -292,6 +317,9 @@ ${h.steps.map((s,i)=>`
 
 <button onclick="window.print()">Print</button>
 `;
+
+  QRCode.toCanvas(document.getElementById("introQR"), startLink, { width: 260 });
+
   h.steps.forEach((s,i)=>{
     QRCode.toCanvas(document.getElementById("pqr"+i), s.code);
     QRCode.toCanvas(document.getElementById("cqr"+i), s.code);
