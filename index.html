@@ -6,25 +6,116 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body { font-family: system-ui, sans-serif; background:#f4f6f8; padding:20px; }
-.card { max-width:900px; margin:auto; background:#fff; padding:20px; border-radius:12px; }
-button { padding:12px 18px; font-size:18px; cursor:pointer; }
+body {
+  font-family: system-ui, sans-serif;
+  background: linear-gradient(180deg, #eaf4ff, #f4f6f8);
+  padding: 20px;
+}
+
+.card {
+  max-width: 900px;
+  margin: auto;
+  background: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+h1, h2, h3 {
+  text-align: center;
+}
+
+button {
+  padding: 14px 22px;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 10px;
+  border: none;
+}
+
+button.primary {
+  background: #2ecc71;
+  color: white;
+  font-weight: bold;
+}
+
+button.secondary {
+  background: #3498db;
+  color: white;
+  margin-right: 10px;
+}
+
+button.print {
+  background: #555;
+  color: white;
+}
+
+input {
+  padding: 14px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  width: 100%;
+  max-width: 280px;
+  text-align: center;
+}
 
 .overlay {
-  position:fixed; inset:0; display:none;
-  align-items:center; justify-content:center;
-  font-size:40px; font-weight:bold; color:white; z-index:1000;
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: bold;
+  color: white;
+  z-index: 1000;
 }
-.overlay.correct { background:rgba(0,160,0,0.85); }
-.overlay.wrong { background:rgba(200,0,0,0.85); }
 
-.print-page { page-break-after:always; }
-.print-item { margin-bottom:20px; }
-.notes { border:1px dashed #aaa; height:40px; margin-top:6px; }
+.overlay.correct { background: rgba(0,160,0,0.85); }
+.overlay.wrong { background: rgba(200,0,0,0.85); }
 
-.qr-label { font-weight:bold; margin-bottom:6px; }
+.print-page { page-break-after: always; }
+.print-item { margin-bottom: 20px; }
+.notes { border: 1px dashed #aaa; height: 40px; margin-top: 6px; }
 
-@media print { button { display:none; } }
+.qr-label { font-weight: bold; margin-bottom: 6px; }
+
+.search {
+  margin: 20px auto;
+  display: block;
+  max-width: 400px;
+}
+
+.hunt-card {
+  background: #f9fbff;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.actions {
+  margin-top: 10px;
+}
+
+.play-screen {
+  text-align: center;
+}
+
+.play-clue {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 24px;
+}
+
+.play-input {
+  margin-bottom: 20px;
+}
+
+@media print {
+  button, input { display: none; }
+}
 </style>
 </head>
 
@@ -122,13 +213,19 @@ else home();
 
 /* ================= HOME ================= */
 function home(){
-  app.innerHTML = `<h1>Scavenger Hunts</h1>` + hunts.map(h=>`
-    <div>
-      <h3>${h.name}</h3>
-      <button onclick="location='?start=${h.id}'">▶ Test Start</button>
-      <button onclick="location='?print=${h.id}'">🖨 Print Instructions</button>
-    </div>
-  `).join("");
+  app.innerHTML = `
+    <h1>Scavenger Hunts</h1>
+    <input class="search" placeholder="Search hunts...">
+    ${hunts.map(h=>`
+      <div class="hunt-card">
+        <h3>${h.name} (${h.steps.length} steps)</h3>
+        <div class="actions">
+          <button class="secondary" onclick="location='?start=${h.id}'">▶ Test</button>
+          <button class="print" onclick="location='?print=${h.id}'">🖨 Print Instructions</button>
+        </div>
+      </div>
+    `).join("")}
+  `;
 }
 
 /* ================= START ================= */
@@ -148,7 +245,9 @@ function startPage(id){
 </ul>
 <p>Don’t worry — there are no wrong turns, just keep trying!</p>
 <p>When you’re ready…<br>Tap the button below to begin your adventure! 🚀</p>
-<button onclick="location='?play=${id}&s=0'">▶️ Start the Hunt</button>
+<div style="text-align:center">
+<button class="primary" onclick="location='?play=${id}&s=0'">▶️ Start the Hunt</button>
+</div>
 `;
 }
 
@@ -162,9 +261,13 @@ function play(){
   }
   const step = h.steps[s];
   app.innerHTML = `
-    <h2>${step.clue}</h2>
-    <input id="ans" placeholder="Enter 6-digit code">
-    <button onclick="check('${step.code}',${s})">Submit</button>
+    <div class="play-screen">
+      <div class="play-clue">${step.clue}</div>
+      <div class="play-input">
+        <input id="ans" placeholder="Enter 6-digit code">
+      </div>
+      <button class="primary" onclick="check('${step.code}',${s})">Submit</button>
+    </div>
   `;
 }
 
@@ -172,7 +275,7 @@ function check(c,s){
   const v=document.getElementById("ans").value.trim();
   if(v===c){
     show("correct");
-    setTimeout(()=>location=`?play=${q.get("play")}&s=${s+1}`,900);
+    setTimeout(()=>location=\`?play=\${q.get("play")}&s=\${s+1}\`,900);
   } else show("wrong");
 }
 
