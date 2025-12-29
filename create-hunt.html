@@ -6,85 +6,78 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body {
-  font-family: system-ui, sans-serif;
-  background: linear-gradient(180deg,#eef2f7,#f4f6f8);
+body{
+  font-family:system-ui,sans-serif;
+  background:linear-gradient(180deg,#eef2f7,#f4f6f8);
   padding:20px;
 }
 
-.card {
+.card{
   max-width:900px;
   margin:auto;
   background:#fff;
   padding:24px;
-  border-radius:14px;
+  border-radius:16px;
 }
 
-h1,h2 { margin-top:0; }
+h1,h2{ text-align:center; }
 
-select, textarea, input {
-  width:100%;
+select,input,textarea,button{
   padding:12px;
   font-size:16px;
-  margin-top:10px;
+  width:100%;
+  margin-top:8px;
+  border-radius:10px;
+  border:1px solid #ccc;
 }
 
-button {
-  padding:10px 14px;
-  font-size:16px;
-  border:none;
-  border-radius:8px;
+textarea{ min-height:70px; resize:vertical; }
+
+button{
   cursor:pointer;
+  border:none;
 }
 
-button.primary { background:#2ecc71; color:white; }
-button.secondary { background:#3498db; color:white; }
-button.danger { background:#e74c3c; color:white; }
+.primary{ background:#2ecc71;color:#fff; }
+.secondary{ background:#3498db;color:#fff; }
+.danger{ background:#e74c3c;color:#fff; }
+.ai{ background:#9b59b6;color:#fff; }
 
-.section {
-  margin-bottom:24px;
-}
-
-.clue-list {
-  margin-top:20px;
-}
-
-.clue-card {
+.clue-card{
   background:#f8fafc;
-  border-radius:12px;
-  padding:14px;
-  margin-bottom:12px;
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  border-radius:14px;
+  padding:16px;
+  margin-top:16px;
+  transition:transform .2s ease;
 }
 
-.clue-header {
+.clue-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
   font-weight:700;
-  margin-bottom:6px;
 }
 
-.location {
-  font-weight:600;
+.controls button{
+  width:auto;
+  margin-left:6px;
+  padding:6px 10px;
+  font-size:14px;
+}
+
+.small{
+  font-size:14px;
   color:#555;
   margin-top:4px;
 }
 
-.controls {
-  margin-top:10px;
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
+.fade-move{
+  animation:move .2s ease;
 }
 
-.preview {
-  background:#eef3f7;
-  padding:12px;
-  border-radius:10px;
-  margin-top:10px;
-}
-
-.fade-move {
-  opacity:0;
-  transform:translateY(10px);
+@keyframes move{
+  from{transform:scale(.98)}
+  to{transform:scale(1)}
 }
 </style>
 </head>
@@ -92,162 +85,155 @@ button.danger { background:#e74c3c; color:white; }
 <body>
 
 <div class="card">
-  <h1>Create New Hunt (UI Test)</h1>
+<h1>🛠 Create a New Scavenger Hunt</h1>
 
-  <!-- EXISTING CLUES -->
-  <div class="section">
-    <h2>Add from Existing Hunts</h2>
+<h2>Hunt Details</h2>
+<input id="huntName" placeholder="Hunt name">
 
-    <select id="huntSelect">
-      <option value="">Select a hunt…</option>
-    </select>
+<select id="theme">
+  <option value="">Select theme</option>
+  <option>Escape</option>
+  <option>Fortnite</option>
+  <option>Hacker</option>
+  <option>Adventure</option>
+  <option>Custom</option>
+</select>
 
-    <select id="clueSelect" disabled>
-      <option value="">Select a clue…</option>
-    </select>
+<hr>
 
-    <div id="cluePreview" class="preview" hidden></div>
+<h2>Add Clues</h2>
 
-    <button class="secondary" onclick="addExistingClue()" style="margin-top:10px">
-      ➕ Add This Clue
-    </button>
-  </div>
+<select id="huntSelect">
+  <option value="">Use clue from existing hunt…</option>
+</select>
 
-  <!-- WRITE YOUR OWN -->
-  <div class="section">
-    <h2>Write Your Own Clue</h2>
+<select id="clueSelect" disabled>
+  <option value="">Select clue…</option>
+</select>
 
-    <textarea id="customClue" placeholder="Clue text"></textarea>
-    <input id="customLocation" placeholder="Location (where QR will be hidden)">
+<button class="secondary" onclick="addExistingClue()">Add Selected Clue</button>
 
-    <button class="primary" onclick="addCustomClue()" style="margin-top:10px">
-      ➕ Add Custom Clue
-    </button>
-  </div>
+<hr>
 
-  <!-- CLUE PLAN -->
-  <div class="section">
-    <h2>Hunt Plan</h2>
-    <div id="clueList" class="clue-list"></div>
-  </div>
+<button class="primary" onclick="addBlankClue()">➕ Write Your Own Clue</button>
+
+<div id="clues"></div>
+
+<hr>
+
+<p class="small">
+QR codes, answer codes, and printable PDFs will be generated after saving (not yet implemented).
+</p>
+
+<button class="primary" style="margin-top:20px" disabled>
+💾 Save Hunt (coming next)
+</button>
 
 </div>
 
 <script>
-/* ===== MOCK SOURCE HUNTS (READ-ONLY, UI ONLY) ===== */
-const SOURCE_HUNTS = [
-  {
-    name:"Escape the House",
-    clues:[
-      { clue:"I show your face but I’m not a photo. I hang on walls and doors. Where am I?", location:"Mirror" },
-      { clue:"I open wide but never talk. I keep food safe and cold. Don’t forget to close me!", location:"Fridge" }
-    ]
-  },
-  {
-    name:"Fortnite IRL",
-    clues:[
-      { clue:"You’ve dropped in. First loot location: Where controllers go when the game is off.", location:"Gaming Desk" },
-      { clue:"Shields up! Find the place where drinks recharge HP.", location:"Fridge" }
-    ]
-  }
-];
+/* ===== Load existing hunts (read-only) ===== */
+const BASE_HUNTS = JSON.parse(localStorage.getItem("hunts")||"[]");
 
-/* ===== STATE ===== */
-let plan = [];
-
-/* ===== INIT ===== */
 const huntSelect = document.getElementById("huntSelect");
 const clueSelect = document.getElementById("clueSelect");
-const preview = document.getElementById("cluePreview");
-const list = document.getElementById("clueList");
+const cluesDiv = document.getElementById("clues");
 
-SOURCE_HUNTS.forEach((h,i)=>{
+let clues = [];
+
+/* Populate hunt dropdown */
+BASE_HUNTS.forEach(h=>{
   const o=document.createElement("option");
-  o.value=i;
+  o.value=h.id;
   o.textContent=h.name;
   huntSelect.appendChild(o);
 });
 
-/* ===== EVENTS ===== */
-huntSelect.onchange = () => {
-  clueSelect.innerHTML = `<option value="">Select a clue…</option>`;
-  preview.hidden = true;
-  if(huntSelect.value===""){
-    clueSelect.disabled=true;
-    return;
-  }
-  clueSelect.disabled=false;
-  SOURCE_HUNTS[huntSelect.value].clues.forEach((c,i)=>{
+huntSelect.onchange=()=>{
+  clueSelect.innerHTML='<option value="">Select clue…</option>';
+  clueSelect.disabled=true;
+  const h=BASE_HUNTS.find(x=>x.id===huntSelect.value);
+  if(!h) return;
+  h.steps.forEach((s,i)=>{
     const o=document.createElement("option");
     o.value=i;
-    o.textContent=`Clue ${i+1} — ${c.location}`;
+    o.textContent=`${s.clue} (${s.location})`;
     clueSelect.appendChild(o);
   });
+  clueSelect.disabled=false;
 };
 
-clueSelect.onchange = () => {
-  const h = SOURCE_HUNTS[huntSelect.value];
-  if(!h || clueSelect.value===""){
-    preview.hidden=true;
-    return;
-  }
-  const c = h.clues[clueSelect.value];
-  preview.innerHTML = `
-    <strong>Clue:</strong><br>${c.clue}<br><br>
-    <strong>Location:</strong> ${c.location}
-  `;
-  preview.hidden=false;
-};
-
-/* ===== ADD CLUES ===== */
+/* ===== Add clues ===== */
 function addExistingClue(){
-  if(huntSelect.value==="" || clueSelect.value==="") return;
-  const c = SOURCE_HUNTS[huntSelect.value].clues[clueSelect.value];
-  plan.push({ clue:c.clue, location:c.location });
+  const h=BASE_HUNTS.find(x=>x.id===huntSelect.value);
+  if(!h || clueSelect.value==="") return;
+  const s=h.steps[clueSelect.value];
+  clues.push({clue:s.clue,location:s.location});
   render();
 }
 
-function addCustomClue(){
-  const clue=document.getElementById("customClue").value.trim();
-  const location=document.getElementById("customLocation").value.trim();
-  if(!clue||!location) return;
-  plan.push({ clue, location });
-  document.getElementById("customClue").value="";
-  document.getElementById("customLocation").value="";
+function addBlankClue(){
+  clues.push({clue:"",location:""});
   render();
 }
 
-/* ===== REORDER / REMOVE ===== */
+/* ===== Render clues ===== */
+function render(){
+  cluesDiv.innerHTML="";
+  clues.forEach((c,i)=>{
+    const d=document.createElement("div");
+    d.className="clue-card fade-move";
+    d.innerHTML=`
+      <div class="clue-header">
+        <span>Clue ${i+1}</span>
+        <div class="controls">
+          <button onclick="move(${i},-1)">⬆</button>
+          <button onclick="move(${i},1)">⬇</button>
+          <button class="danger" onclick="removeClue(${i})">✖</button>
+        </div>
+      </div>
+
+      <label>Clue</label>
+      <textarea oninput="clues[${i}].clue=this.value">${c.clue}</textarea>
+
+      <label>Location</label>
+      <input value="${c.location}" oninput="clues[${i}].location=this.value">
+
+      <div class="small">Theme: ${document.getElementById("theme").value||"—"}</div>
+
+      <button class="ai" onclick="aiSuggest(${i})">🤖 Get AI Suggestion</button>
+      <button class="secondary" onclick="aiRewrite(${i})">♻ Rewrite This Clue</button>
+    `;
+    cluesDiv.appendChild(d);
+  });
+}
+
+/* ===== Reorder ===== */
 function move(i,dir){
   const n=i+dir;
-  if(n<0||n>=plan.length) return;
-  [plan[i],plan[n]]=[plan[n],plan[i]];
+  if(n<0||n>=clues.length) return;
+  [clues[i],clues[n]]=[clues[n],clues[i]];
   render();
 }
 
 function removeClue(i){
-  plan.splice(i,1);
+  clues.splice(i,1);
   render();
 }
 
-/* ===== RENDER ===== */
-function render(){
-  list.innerHTML="";
-  plan.forEach((c,i)=>{
-    const div=document.createElement("div");
-    div.className="clue-card";
-    div.innerHTML=`
-      <div class="clue-header">Clue ${i+1}</div>
-      ${c.clue}
-      <div class="location">📍 ${c.location}</div>
-      <div class="controls">
-        <button onclick="move(${i},-1)">⬆ Up</button>
-        <button onclick="move(${i},1)">⬇ Down</button>
-        <button class="danger" onclick="removeClue(${i})">🗑 Remove</button>
-      </div>
-    `;
-    list.appendChild(div);
-  });
+/* ===== AI UI stubs ===== */
+function aiSuggest(i){
+  const theme=document.getElementById("theme").value||"Adventure";
+  if(clues[i].clue||clues[i].location) return alert("Clear fields to auto-generate.");
+  clues[i].clue=`(${theme} AI) Find the place that fits this theme best.`;
+  clues[i].location="Example Location";
+  render();
+}
+
+function aiRewrite(i){
+  if(!clues[i].clue) return;
+  clues[i].clue += " (refined)";
+  render();
 }
 </script>
 
