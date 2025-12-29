@@ -5,12 +5,15 @@
 <title>Scavenger Hunt</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
+<!-- index.html v1.1.1 | Restores cut-out PDF page | Baseline v1 preserved -->
+
 <style>
 body {
   font-family: system-ui, sans-serif;
   background: linear-gradient(180deg,#eef2f7,#f4f6f8);
   padding:20px;
 }
+
 .card {
   max-width:900px;
   margin:auto;
@@ -18,6 +21,7 @@ body {
   padding:24px;
   border-radius:14px;
 }
+
 button {
   padding:14px 20px;
   font-size:18px;
@@ -25,16 +29,19 @@ button {
   border:none;
   border-radius:10px;
 }
+
 button.primary {
   background:#2ecc71;
   color:white;
   margin-top:14px;
 }
+
 button.secondary {
   background:#2563eb;
   color:white;
   margin:12px 0 18px 0;
 }
+
 input {
   padding:14px;
   font-size:18px;
@@ -43,19 +50,23 @@ input {
   margin-top:14px;
   text-align:center;
 }
+
 .center { text-align:center; }
+
 .hunt-card {
   padding:16px;
   border-radius:12px;
   background:#f8fafc;
   margin-bottom:14px;
 }
+
 .search {
   width:100%;
   padding:12px;
   font-size:16px;
   margin:16px 0;
 }
+
 .overlay {
   position:fixed;
   inset:0;
@@ -70,13 +81,7 @@ input {
 .overlay.correct { background:rgba(0,160,0,0.85); }
 .overlay.wrong { background:rgba(200,0,0,0.85); }
 
-video {
-  width:100%;
-  max-width:320px;
-  margin-top:14px;
-  border-radius:12px;
-}
-
+/* PRINT */
 .print-page { page-break-after:always; }
 .print-item { margin-bottom:20px; }
 .notes { border:1px dashed #aaa; height:40px; margin-top:6px; }
@@ -86,10 +91,28 @@ video {
   text-align:center;
   margin-top:60px;
 }
+.print-intro h1 { font-size:36px; margin-bottom:20px; }
+.print-intro p { font-size:18px; margin-bottom:20px; }
 .print-intro canvas { margin-top:20px; }
 
+/* CUT-OUT GRID */
+.cut-grid {
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:20px;
+}
+.cut-card {
+  border:1px dashed #333;
+  padding:12px;
+  text-align:center;
+  height:260px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+
 @media print {
-  button, .search, video { display:none; }
+  button, .search { display:none; }
 }
 </style>
 </head>
@@ -102,21 +125,15 @@ video {
 <div id="wrong" class="overlay wrong">❌ Try Again</div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 
 <script>
-/* =====================================================
-   v1.1 IMMUTABLE HUNT STORE — SINGLE SOURCE OF TRUTH
-===================================================== */
-const STORE_KEY = "scavHunts_v1_locked";
+/* ================= IMMUTABLE STORE ================= */
+const STORE_KEY = "scavenger_hunts_store_v1";
 
-function uid(){ return Math.random().toString(36).slice(2,9); }
-function code(){ return Math.floor(100000 + Math.random()*900000).toString(); }
-
-/* ===== BASE HUNTS (VERBATIM, UNCHANGED) ===== */
 const BASE_HUNTS = [
-  /* Escape the House */
-  { name:"Escape the House", clues:[
+{
+  name:"Escape the House",
+  clues:[
     ["I show your face but I’m not a photo. I hang on walls and doors. Where am I?","Mirror"],
     ["I have pages but no homework. I’m quiet unless you drop me. I live where stories sleep.","Bookshelf"],
     ["I open wide but never talk. I keep food safe and cold. Don’t forget to close me!","Fridge"],
@@ -127,9 +144,11 @@ const BASE_HUNTS = [
     ["I light up the dark but disappear by day. Flip me on.","Lamp"],
     ["I’m full of secrets, but I don’t talk. You knock before opening me.","Bedroom Door"],
     ["You cracked every lock! The final key is hidden where treasures are kept safe. Your Colour is RED","Red Ribbon"]
-  ]},
-  /* Fortnite IRL */
-  { name:"Fortnite IRL", clues:[
+  ]
+},
+{
+  name:"Fortnite IRL",
+  clues:[
     ["You’ve dropped in. First loot location: Where controllers go when the game is off.","Gaming Desk"],
     ["Shields up! Find the place where drinks recharge HP.","Fridge"],
     ["Storm incoming 🌪️ Where do shoes hide when the storm hits outside?","Entrance"],
@@ -142,9 +161,11 @@ const BASE_HUNTS = [
     ["Final circle. Only one remains. Where battles are watched, not played.","TV"],
     ["One last challenge… Look where snacks disappear during long sessions.","Pantry"],
     ["VICTORY ROYALE 🏆 Claim your reward where legends are made. Your colour is SILVER","Silver Ribbon"]
-  ]},
-  /* System Breach */
-  { name:"System Breach", clues:[
+  ]
+},
+{
+  name:"System Breach",
+  clues:[
     ["SYSTEM ONLINE Begin at the device that controls all others.","Router"],
     ["AUTHENTICATION REQUIRED Find where passwords are written but never stored digitally.","Notebook"],
     ["DATA COLD STORAGE Files preserved at low temperature.","Fridge"],
@@ -160,40 +181,37 @@ const BASE_HUNTS = [
     ["USER PROFILE Where the operator rests.","Bed"],
     ["FINAL ACCESS NODE Only the admin reaches this point.","Desk"],
     ["ROOT ACCESS GRANTED ACCESS GRANTED SYSTEM BREACHED Retrieve payload from secure location. Your colour is GREEN","Green Ribbon"]
-  ]}
+  ]
+}
 ];
 
-/* ===== INIT STORE (RUNS ONCE) ===== */
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function code(){ return Math.floor(100000 + Math.random()*900000).toString(); }
+
 function loadStore(){
-  let data = JSON.parse(localStorage.getItem(STORE_KEY));
-  if(data) return data;
-
-  data = BASE_HUNTS.map(h=>({
-    id:uid(),
-    name:h.name,
-    steps:h.clues.map(c=>({ clue:c[0], location:c[1], code:code() }))
-  }));
-
-  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+  let data = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+  if(!data){
+    data = BASE_HUNTS.map(h=>({
+      id:uid(),
+      name:h.name,
+      steps:h.clues.map(c=>({ clue:c[0], location:c[1], code:code() }))
+    }));
+    localStorage.setItem(STORE_KEY, JSON.stringify(data));
+  }
   return data;
 }
 
 const hunts = loadStore();
-
-/* =====================================================
-   ROUTER
-===================================================== */
 const q = new URLSearchParams(location.search);
 const app = document.getElementById("app");
 
+/* ================= ROUTER ================= */
 if(q.get("start")) startPage(q.get("start"));
 else if(q.get("play")) play();
 else if(q.get("print")) printPage(q.get("print"));
 else home();
 
-/* =====================================================
-   HOME (UNCHANGED)
-===================================================== */
+/* ================= HOME ================= */
 function home(){
   app.innerHTML = `
     <h1>Scavenger Hunts</h1>
@@ -209,22 +227,22 @@ function home(){
   `;
 }
 
-/* =====================================================
-   START (UNCHANGED)
-===================================================== */
+/* ================= START ================= */
 function startPage(id){
   const h = hunts.find(x=>x.id===id);
   app.innerHTML = `
 <div class="center">
 <h1>🎉 Welcome, Explorer!</h1>
 <p><strong>${h.name}</strong></p>
+<p>You have been invited on a special scavenger hunt!</p>
+<ul style="text-align:left;display:inline-block">
+<li>Look carefully</li><li>Think smart</li><li>Scan a QR code</li><li>Type in a secret number</li>
+</ul>
 <button class="primary" onclick="location='?play=${id}&s=0'">▶️ Start the Hunt</button>
 </div>`;
 }
 
-/* =====================================================
-   PLAY + CAMERA SCAN (ADDITIVE)
-===================================================== */
+/* ================= PLAY ================= */
 function play(){
   const h = hunts.find(x=>x.id===q.get("play"));
   const s = parseInt(q.get("s"));
@@ -238,17 +256,14 @@ function play(){
   <h2>${step.clue}</h2>
   <input id="ans" placeholder="Enter 6-digit code">
   <button class="primary" onclick="check('${step.code}',${s})">Submit</button>
-  <p>— or scan QR —</p>
-  <video id="video" autoplay playsinline></video>
 </div>`;
-  startScanner(step.code, s);
 }
 
 function check(c,s){
   const v=document.getElementById("ans").value.trim();
   if(v===c){
     show("correct");
-    setTimeout(()=>location='?play='+q.get("play")+'&s='+(s+1),900);
+    setTimeout(()=>location='?play=' + q.get("play") + '&s=' + (s+1),900);
   } else show("wrong");
 }
 
@@ -258,66 +273,47 @@ function show(id){
   setTimeout(()=>el.style.display="none",1000);
 }
 
-function startScanner(expected, step){
-  const video = document.getElementById("video");
-  navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } })
-    .then(stream=>{
-      video.srcObject = stream;
-      const canvas=document.createElement("canvas");
-      const ctx=canvas.getContext("2d");
-      const scan=()=>{
-        if(video.readyState===video.HAVE_ENOUGH_DATA){
-          canvas.width=video.videoWidth;
-          canvas.height=video.videoHeight;
-          ctx.drawImage(video,0,0);
-          const img=ctx.getImageData(0,0,canvas.width,canvas.height);
-          const qr=jsQR(img.data,canvas.width,canvas.height);
-          if(qr && qr.data===expected){
-            stream.getTracks().forEach(t=>t.stop());
-            show("correct");
-            setTimeout(()=>location='?play='+q.get("play")+'&s='+(step+1),900);
-            return;
-          }
-        }
-        requestAnimationFrame(scan);
-      };
-      scan();
-    });
-}
-
-/* =====================================================
-   PRINT (UNCHANGED + FULL URL START QR)
-===================================================== */
+/* ================= PRINT ================= */
 function printPage(id){
   const h = hunts.find(x=>x.id===id);
-  const startURL = location.origin + location.pathname + '?start=' + id;
+  const startLink = location.origin + location.pathname + '?start=' + id;
 
   app.innerHTML = `
 <div class="print-page print-intro">
   <h1>${h.name}</h1>
-  <p>Scan to start</p>
+  <p>Scan to start this scavenger hunt</p>
   <canvas id="introQR"></canvas>
 </div>
 
-<h1>${h.name} – Parent Instructions</h1>
-
 <div class="print-page">
+<h1>${h.name} – Parent Instructions</h1>
 ${h.steps.map((s,i)=>`
   <div class="print-item">
     <strong>Clue ${i+1}:</strong> ${s.clue}<br>
     <strong>Location:</strong> ${s.location}<br>
     <strong>Code:</strong> ${s.code}<br>
     <canvas id="pqr${i}"></canvas>
-  </div>
-`).join("")}
+    <div class="notes"></div>
+  </div>`).join("")}
 </div>
 
+<div class="print-page">
+<h2>Cut-Out QR Codes</h2>
+<div class="cut-grid">
+${h.steps.map((s,i)=>`
+  <div class="cut-card">
+    <div><strong>${s.location}</strong></div>
+    <canvas id="cqr${i}"></canvas>
+    <div><strong>${s.code}</strong></div>
+  </div>`).join("")}
+</div>
 <button onclick="window.print()">Print</button>
 `;
 
-  QRCode.toCanvas(document.getElementById("introQR"), startURL, { width:260 });
+  QRCode.toCanvas(document.getElementById("introQR"), startLink, { width:260 });
   h.steps.forEach((s,i)=>{
-    QRCode.toCanvas(document.getElementById("pqr"+i), s.code);
+    QRCode.toCanvas(document.getElementById("pqr"+i), s.code, { width:120 });
+    QRCode.toCanvas(document.getElementById("cqr"+i), s.code, { width:120 });
   });
 }
 </script>
