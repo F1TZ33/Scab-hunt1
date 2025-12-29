@@ -34,6 +34,12 @@ button.primary {
   margin-top:14px;
 }
 
+button.secondary {
+  background:#3498db;
+  color:white;
+  margin-top:10px;
+}
+
 input {
   padding:14px;
   font-size:18px;
@@ -61,6 +67,13 @@ input {
   margin:16px 0;
 }
 
+video {
+  width:100%;
+  max-width:320px;
+  margin-top:14px;
+  border-radius:12px;
+}
+
 .overlay {
   position:fixed;
   inset:0;
@@ -81,7 +94,7 @@ input {
 .qr-label { font-weight:bold; margin-bottom:6px; }
 
 @media print {
-  button, .search { display:none; }
+  button, .search, video { display:none; }
 }
 </style>
 </head>
@@ -229,12 +242,55 @@ function play(){
   <h2 style="font-size:26px;font-weight:700">${step.clue}</h2>
   <input id="ans" placeholder="Enter 6-digit code">
   <br>
+  <button class="secondary" onclick="scanQR()">📷 Scan QR Code</button>
+  <br>
   <button class="primary" onclick="check('${step.code}',${s})">Submit</button>
+  <video id="video" hidden></video>
 </div>
 `;
 }
 
-/* ===== FIXED LINE (NO TEMPLATE LITERALS) ===== */
+/* ================= QR SCAN ================= */
+let stream, detector;
+
+async function scanQR(){
+  if(!('BarcodeDetector' in window)){
+    alert("QR scanning not supported on this device.");
+    return;
+  }
+  detector = new BarcodeDetector({ formats:["qr_code"] });
+  const video = document.getElementById("video");
+  video.hidden = false;
+
+  stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
+  video.srcObject = stream;
+  video.play();
+
+  requestAnimationFrame(scanFrame);
+}
+
+async function scanFrame(){
+  const video = document.getElementById("video");
+  if(video.readyState === video.HAVE_ENOUGH_DATA){
+    const codes = await detector.detect(video);
+    if(codes.length){
+      document.getElementById("ans").value = codes[0].rawValue;
+      stopScan();
+      return;
+    }
+  }
+  requestAnimationFrame(scanFrame);
+}
+
+function stopScan(){
+  if(stream){
+    stream.getTracks().forEach(t=>t.stop());
+    stream = null;
+  }
+  document.getElementById("video").hidden = true;
+}
+
+/* ================= CHECK ================= */
 function check(c,s){
   const v=document.getElementById("ans").value.trim();
   if(v===c){
