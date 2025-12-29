@@ -79,6 +79,7 @@ input {
 .overlay.correct { background:rgba(0,160,0,0.85); }
 .overlay.wrong { background:rgba(200,0,0,0.85); }
 
+/* PRINT */
 .print-page { page-break-after:always; }
 .print-item { margin-bottom:20px; }
 .notes { border:1px dashed #aaa; height:40px; margin-top:6px; }
@@ -88,15 +89,29 @@ input {
   text-align:center;
   margin-top:60px;
 }
+.print-intro h1 {
+  font-size:36px;
+  margin-bottom:20px;
+}
+.print-intro p {
+  font-size:18px;
+  margin-bottom:20px;
+}
 
-video {
-  width:260px;
-  border-radius:12px;
-  margin-top:14px;
+.cut-grid {
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:20px;
+}
+.cut-card {
+  border:1px dashed #aaa;
+  padding:14px;
+  border-radius:10px;
+  text-align:center;
 }
 
 @media print {
-  button, .search, video { display:none; }
+  button, .search { display:none; }
 }
 </style>
 </head>
@@ -109,41 +124,11 @@ video {
 <div id="wrong" class="overlay wrong">❌ Try Again</div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+<script src="hunts-source.js"></script>
 
 <script>
-/* ================= UTIL ================= */
-function uid(){ return Math.random().toString(36).slice(2,9); }
-function code(){ return Math.floor(100000 + Math.random()*900000).toString(); }
-
-/* ================= BASE HUNTS ================= */
-const BASE_HUNTS = [
-  {
-    name:"Escape the House",
-    clues:[
-      ["I show your face but I’m not a photo. I hang on walls and doors. Where am I?","Mirror"],
-      ["I have pages but no homework. I’m quiet unless you drop me. I live where stories sleep.","Bookshelf"],
-      ["I open wide but never talk. I keep food safe and cold. Don’t forget to close me!","Fridge"],
-      ["I go round and round but never get dizzy. I clean but hate socks in pairs.","Washing Machine"],
-      ["I have hands but no arms. I never clap, but I’m always right on time.","Clock"],
-      ["You cracked every lock! The final key is hidden where treasures are kept safe. Your Colour is RED","Red Ribbon"]
-    ]
-  }
-];
-
-/* ================= INIT ================= */
-let hunts = JSON.parse(localStorage.getItem("hunts")||"[]");
-
-if(!localStorage.getItem("huntsInitialized")){
-  hunts = BASE_HUNTS.map(h=>({
-    id:uid(),
-    name:h.name,
-    steps:h.clues.map(c=>({ clue:c[0], location:c[1], code:code() }))
-  }));
-  localStorage.setItem("hunts",JSON.stringify(hunts));
-  localStorage.setItem("huntsInitialized","true");
-}
-
+/* ================= DATA ================= */
+const hunts = window.HUNT_SOURCE;
 const q = new URLSearchParams(location.search);
 const app = document.getElementById("app");
 
@@ -157,10 +142,16 @@ else home();
 function home(){
   app.innerHTML = `
     <h1>Scavenger Hunts</h1>
+
     <input class="search" placeholder="Search hunts...">
+
+    <button class="secondary" onclick="location='create-hunt.html'">
+      ➕ Create New Hunt
+    </button>
+
     ${hunts.map(h=>`
       <div class="hunt-card">
-        <strong>${h.name}</strong><br><br>
+        <strong>${h.name} (${h.steps.length} steps)</strong><br><br>
         <button onclick="location='?start=${h.id}'">▶ Test</button>
         <button onclick="location='?print=${h.id}'">🖨 Print Instructions</button>
       </div>
@@ -168,15 +159,31 @@ function home(){
   `;
 }
 
-/* ================= START ================= */
+/* ================= INTRO PAGE (RESTORED) ================= */
 function startPage(id){
   const h = hunts.find(x=>x.id===id);
   app.innerHTML = `
 <div class="center">
-<h1>🎉 Welcome, Explorer!</h1>
-<p><strong>${h.name}</strong></p>
-<p>You have been invited on a special scavenger hunt!</p>
-<button class="primary" onclick="location='?play=${id}&s=0'">▶️ Start the Hunt</button>
+  <h1>🎉 Welcome, Explorer!</h1>
+  <p><strong>${h.name}</strong></p>
+
+  <p>
+    You have been invited on a special scavenger hunt!<br>
+    Around this place are hidden clues waiting to be found.
+  </p>
+
+  <ul style="text-align:left;display:inline-block">
+    <li>Look carefully</li>
+    <li>Think smart</li>
+    <li>Scan QR codes or</li>
+    <li>Enter the secret code</li>
+  </ul>
+
+  <p>When you’re ready…</p>
+
+  <button class="primary" onclick="location='?play=${id}&s=0'">
+    ▶️ Start the Hunt
+  </button>
 </div>
 `;
 }
@@ -185,54 +192,21 @@ function startPage(id){
 function play(){
   const h = hunts.find(x=>x.id===q.get("play"));
   const s = parseInt(q.get("s"));
-  if(s>=h.steps.length){
+  if(s >= h.steps.length){
     app.innerHTML = `<h2 class="center">🎉 Hunt Complete!</h2>`;
     return;
   }
   const step = h.steps[s];
   app.innerHTML = `
 <div class="center">
-  <h2>${step.clue}</h2>
-  <input id="ans" placeholder="Enter 6-digit code">
+  <h2 style="font-size:26px;font-weight:700">${step.clue}</h2>
+  <input id="ans" placeholder="Enter code">
+  <br>
   <button class="primary" onclick="check('${step.code}',${s})">Submit</button>
-
-  <p><strong>Or scan the QR code:</strong></p>
-  <video id="video" autoplay playsinline></video>
 </div>
 `;
-  startScanner(step.code,s);
 }
 
-/* ================= CAMERA SCAN ================= */
-function startScanner(expected,s){
-  const video=document.getElementById("video");
-  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-    .then(stream=>{
-      video.srcObject=stream;
-      const canvas=document.createElement("canvas");
-      const ctx=canvas.getContext("2d");
-
-      const scan=()=>{
-        if(video.readyState===video.HAVE_ENOUGH_DATA){
-          canvas.width=video.videoWidth;
-          canvas.height=video.videoHeight;
-          ctx.drawImage(video,0,0);
-          const img=ctx.getImageData(0,0,canvas.width,canvas.height);
-          const qr=jsQR(img.data,canvas.width,canvas.height);
-          if(qr && qr.data===expected){
-            stream.getTracks().forEach(t=>t.stop());
-            show("correct");
-            setTimeout(()=>location='?play='+q.get("play")+'&s='+(s+1),900);
-            return;
-          }
-        }
-        requestAnimationFrame(scan);
-      };
-      scan();
-    });
-}
-
-/* ================= CHECK ================= */
 function check(c,s){
   const v=document.getElementById("ans").value.trim();
   if(v===c){
@@ -247,47 +221,63 @@ function show(id){
   setTimeout(()=>el.style.display="none",1000);
 }
 
-/* ================= PRINT ================= */
+/* ================= PRINT (RESTORED FORMAT) ================= */
 function printPage(id){
   const h = hunts.find(x=>x.id===id);
-  const startLink = location.origin + location.pathname + '?start=' + id;
+  const startURL = location.origin + location.pathname + '?start=' + id;
 
   app.innerHTML = `
 <div class="print-page print-intro">
   <h1>${h.name}</h1>
-  <p>Scan to begin</p>
+  <p>Welcome! Scan the QR code below to begin this scavenger hunt.</p>
+  <p><strong>Players:</strong> Scan to start</p>
   <canvas id="introQR"></canvas>
 </div>
 
 <div class="print-page">
-${h.steps.map((s,i)=>`
-  <div class="print-item">
-    <strong>Clue ${i+1}:</strong> ${s.clue}<br>
-    <strong>Location:</strong> ${s.location}<br>
-    <strong>Code:</strong> ${s.code}<br>
-    <canvas id="pqr${i}"></canvas>
-  </div>
-`).join("")}
+  <h1>${h.name} – Parent Instructions</h1>
+  ${h.steps.map((s,i)=>`
+    <div class="print-item">
+      <strong>Clue ${i+1}:</strong> ${s.clue}<br>
+      <strong>Location:</strong> ${s.location}<br>
+      <strong>Code:</strong> ${s.code}
+      <div class="notes"></div>
+    </div>
+  `).join("")}
 </div>
 
 <div class="print-page">
-<h2>Cut-Out QR Codes</h2>
-${h.steps.map((s,i)=>`
-  <div class="print-item">
-    <canvas id="cqr${i}"></canvas>
+  <h2>Cut-Out Cards</h2>
+  <div class="cut-grid">
+    ${h.steps.map((s,i)=>`
+      <div class="cut-card">
+        <strong>Clue ${i+1}</strong><br><br>
+        ${s.clue}<br><br>
+        Code: <strong>${s.code}</strong><br><br>
+        <canvas id="cutqr${i}"></canvas>
+      </div>
+    `).join("")}
   </div>
-`).join("")}
 </div>
 
 <button onclick="window.print()">Print</button>
 `;
 
-  QRCode.toCanvas(document.getElementById("introQR"), startLink,{width:240});
+  QRCode.toCanvas(
+    document.getElementById("introQR"),
+    startURL,
+    { width:260 }
+  );
+
   h.steps.forEach((s,i)=>{
-    QRCode.toCanvas(document.getElementById("pqr"+i), s.code);
-    QRCode.toCanvas(document.getElementById("cqr"+i), s.code);
+    QRCode.toCanvas(
+      document.getElementById("cutqr"+i),
+      s.code,
+      { width:120 }
+    );
   });
 }
 </script>
+
 </body>
 </html>
