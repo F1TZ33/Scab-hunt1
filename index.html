@@ -28,26 +28,9 @@ button {
   border-radius:10px;
 }
 
-button.primary {
-  background:#2ecc71;
-  color:white;
-  margin-top:14px;
-}
-
-button.secondary {
-  background:#3498db;
-  color:white;
-  margin-top:10px;
-}
-
-input {
-  padding:14px;
-  font-size:18px;
-  width:100%;
-  max-width:320px;
-  margin-top:14px;
-  text-align:center;
-}
+button.primary { background:#2ecc71; color:white; }
+button.secondary { background:#3498db; color:white; }
+button.danger { background:#e74c3c; color:white; }
 
 .center { text-align:center; }
 
@@ -65,38 +48,8 @@ input {
   margin:16px 0;
 }
 
-.scanner {
-  margin-top:14px;
-  display:none;
-}
-
-video {
-  width:100%;
-  max-width:320px;
-  border-radius:12px;
-}
-
-.overlay {
-  position:fixed;
-  inset:0;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  font-size:40px;
-  font-weight:bold;
-  color:white;
-  z-index:1000;
-}
-.overlay.correct { background:rgba(0,160,0,0.85); }
-.overlay.wrong { background:rgba(200,0,0,0.85); }
-
-.print-page { page-break-after:always; }
-.print-item { margin-bottom:20px; }
-.notes { border:1px dashed #aaa; height:40px; margin-top:6px; }
-.qr-label { font-weight:bold; margin-bottom:6px; }
-
 @media print {
-  button, .search, .scanner { display:none; }
+  button, .search { display:none; }
 }
 </style>
 </head>
@@ -105,11 +58,7 @@ video {
 
 <div class="card" id="app"></div>
 
-<div id="correct" class="overlay correct">✅ Correct!</div>
-<div id="wrong" class="overlay wrong">❌ Try Again</div>
-
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 
 <script>
 /* ================= UTIL ================= */
@@ -177,184 +126,60 @@ let hunts = JSON.parse(localStorage.getItem("hunts")||"[]");
 
 if(!localStorage.getItem("huntsInitialized")){
   hunts = BASE_HUNTS.map(h=>({
-    id:uid(),
-    name:h.name,
-    steps:h.clues.map(c=>({ clue:c[0], location:c[1], code:code() }))
+    id: uid(),
+    name: h.name,
+    isBase: true,
+    steps: h.clues.map(c=>({
+      clue: c[0],
+      location: c[1],
+      code: code()
+    }))
   }));
   localStorage.setItem("hunts",JSON.stringify(hunts));
   localStorage.setItem("huntsInitialized","true");
 }
 
-const q = new URLSearchParams(location.search);
 const app = document.getElementById("app");
-
-/* ================= ROUTER ================= */
-if(q.get("start")) startPage(q.get("start"));
-else if(q.get("play")) play();
-else if(q.get("print")) printPage(q.get("print"));
-else home();
 
 /* ================= HOME ================= */
 function home(){
+  const hunts = JSON.parse(localStorage.getItem("hunts")||"[]");
+
   app.innerHTML = `
     <h1>Scavenger Hunts</h1>
+
+    <button class="secondary" onclick="location='create-hunt.html'">
+      ➕ Create New Hunt
+    </button>
+
     <input class="search" placeholder="Search hunts...">
-    <button class="primary" onclick="location='create.html'">➕ Create New Hunt</button>
+
     ${hunts.map(h=>`
       <div class="hunt-card">
         <strong>${h.name} (${h.steps.length} steps)</strong><br><br>
+
         <button onclick="location='?start=${h.id}'">▶ Test</button>
-        <button onclick="location='?print=${h.id}'">🖨 Print Instructions</button>
+        <button onclick="location='?print=${h.id}'">🖨 Print</button>
+
+        ${!h.isBase ? `
+          <button class="danger" onclick="deleteHunt('${h.id}')">
+            🗑 Delete
+          </button>
+        ` : ``}
       </div>
     `).join("")}
   `;
 }
 
-/* ================= START ================= */
-function startPage(id){
-  const h = hunts.find(x=>x.id===id);
-  app.innerHTML = `
-<div class="center">
-<h1>🎉 Welcome, Explorer!</h1>
-<p><strong>${h.name}</strong></p>
-<p>You have been invited on a special scavenger hunt!</p>
-<p>Around this place are hidden clues waiting to be found.<br>
-Each clue will lead you to the next one.</p>
-<ul style="text-align:left;display:inline-block">
-<li>Look carefully</li>
-<li>Think smart</li>
-<li>Scan a QR code</li>
-<li>Type in a secret number</li>
-</ul>
-<p>When you’re ready…</p>
-<button class="primary" onclick="location='?play=${id}&s=0'">▶️ Start the Hunt</button>
-</div>`;
+function deleteHunt(id){
+  if(!confirm("Delete this hunt? This cannot be undone.")) return;
+  let hunts = JSON.parse(localStorage.getItem("hunts")||"[]");
+  hunts = hunts.filter(h=>h.id!==id);
+  localStorage.setItem("hunts",JSON.stringify(hunts));
+  home();
 }
 
-/* ================= PLAY ================= */
-let scanStream, scanActive=false;
-
-function play(){
-  const h = hunts.find(x=>x.id===q.get("play"));
-  const s = parseInt(q.get("s"));
-  if(s>=h.steps.length){
-    app.innerHTML = `<h2 class="center">🎉 Hunt Complete!</h2>`;
-    return;
-  }
-  const step = h.steps[s];
-  app.innerHTML = `
-<div class="center">
-  <h2 style="font-size:26px;font-weight:700">${step.clue}</h2>
-  <input id="ans" placeholder="Enter 6-digit code">
-  <button class="secondary" onclick="startScan()">📷 Scan QR Code</button>
-
-  <div class="scanner" id="scanner">
-    <video id="video" autoplay playsinline></video>
-    <canvas id="canvas" hidden></canvas>
-    <p>Point camera at QR code</p>
-  </div>
-
-  <button class="primary" onclick="check('${step.code}',${s})">Submit</button>
-</div>`;
-}
-
-/* ================= QR SCANNER ================= */
-async function startScan(){
-  if(scanActive) return;
-  scanActive = true;
-
-  const scanner = document.getElementById("scanner");
-  const video = document.getElementById("video");
-  const canvas = document.getElementById("canvas");
-  const ctx = canvas.getContext("2d");
-
-  scanner.style.display = "block";
-
-  scanStream = await navigator.mediaDevices.getUserMedia({
-    video:{ facingMode:"environment" }
-  });
-
-  video.srcObject = scanStream;
-
-  function tick(){
-    if(!scanActive) return;
-    if(video.readyState === video.HAVE_ENOUGH_DATA){
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video,0,0);
-      const img = ctx.getImageData(0,0,canvas.width,canvas.height);
-      const qr = jsQR(img.data,img.width,img.height);
-      if(qr){
-        document.getElementById("ans").value = qr.data;
-        stopScan();
-        return;
-      }
-    }
-    requestAnimationFrame(tick);
-  }
-  tick();
-}
-
-function stopScan(){
-  scanActive = false;
-  if(scanStream){
-    scanStream.getTracks().forEach(t=>t.stop());
-    scanStream = null;
-  }
-  document.getElementById("scanner").style.display="none";
-}
-
-/* ================= CHECK ================= */
-function check(c,s){
-  const v=document.getElementById("ans").value.trim();
-  if(v===c){
-    show("correct");
-    setTimeout(()=>location='?play=' + q.get("play") + '&s=' + (s+1),900);
-  } else show("wrong");
-}
-
-function show(id){
-  const el=document.getElementById(id);
-  el.style.display="flex";
-  setTimeout(()=>el.style.display="none",1000);
-}
-
-/* ================= PRINT ================= */
-function printPage(id){
-  const h = hunts.find(x=>x.id===id);
-  app.innerHTML = `
-<h1>${h.name} – Parent Instructions</h1>
-
-<div class="print-page">
-${h.steps.map((s,i)=>`
-  <div class="print-item">
-    <strong>Clue ${i+1}:</strong> ${s.clue}<br>
-    <strong>Location:</strong> ${s.location}<br>
-    <strong>Code:</strong> ${s.code}<br>
-    <div class="qr-label">QR Code for Clue ${i+1}</div>
-    <canvas id="pqr${i}"></canvas>
-    <div class="notes"></div>
-  </div>
-`).join("")}
-</div>
-
-<div class="print-page">
-<h2>Cut-Out QR Codes</h2>
-${h.steps.map((s,i)=>`
-  <div class="print-item">
-    <div class="qr-label">Clue ${i+1} – ${s.location}</div>
-    <canvas id="cqr${i}"></canvas>
-  </div>
-`).join("")}
-</div>
-
-<button onclick="window.print()">Print</button>
-`;
-  h.steps.forEach((s,i)=>{
-    QRCode.toCanvas(document.getElementById("pqr"+i), s.code);
-    QRCode.toCanvas(document.getElementById("cqr"+i), s.code);
-  });
-}
+home();
 </script>
 
 </body>
