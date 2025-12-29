@@ -195,7 +195,17 @@ else home();
 function home(){
   app.innerHTML = `
     <h1>Scavenger Hunts</h1>
+
     <input class="search" placeholder="Search hunts...">
+
+    <div class="center">
+      <button class="secondary" onclick="location='create-hunt.html'">
+        ➕ Create New Hunt
+      </button>
+    </div>
+
+    <br>
+
     ${hunts.map(h=>`
       <div class="hunt-card">
         <strong>${h.name} (${h.steps.length} steps)</strong><br><br>
