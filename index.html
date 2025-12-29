@@ -1,27 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Keyword Scavenger Hunts</title>
-
-<style>
-body { font-family: system-ui, sans-serif; background:#f4f6f8; padding:20px; }
-.card { max-width:900px; margin:auto; background:#fff; padding:20px; border-radius:12px; }
-.hunt { border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px; }
-button { padding:8px 14px; margin:4px; }
-input, textarea { width:100%; padding:8px; margin-bottom:8px; }
-.overlay {
-  position:fixed; inset:0;
-  background:rgba(0,0,0,.6);
-  display:none;
-  justify-content:center;
-  align-items:center;
-  color:#fff;
-  font-size:24px;
-  z-index:1000;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keyword Scavenger Hunt</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f4f6f8; padding: 20px; }
+    .card { max-width: 900px; margin: auto; background: #fff; padding: 20px; border-radius: 12px; }
+    .hunt { border: 1px solid #ddd; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+    button { margin: 6px 6px 6px 0; padding: 8px 14px; }
+    input { width: 100%; padding: 8px; margin-bottom: 10px; }
+    .error { background: #ffe5e5; padding: 12px; border-radius: 8px; }
+    video { width: 100%; max-width: 400px; margin-top: 10px; }
+    .overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 24px;
+      z-index: 1000;
+    }
+  </style>
 </head>
 
 <body>
@@ -30,196 +33,212 @@ input, textarea { width:100%; padding:8px; margin-bottom:8px; }
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 
 <script>
-/* ================= HELPERS ================= */
+/* ====================== HELPERS ===================== */
+function cleanText(t){
+  return t.replace(/[‘’]/g,"'").replace(/[“”]/g,'"');
+}
 function uid(){ return Math.random().toString(36).slice(2,9); }
 
-/* ================= BASE HUNTS (FULL) ================= */
+/* ====================== HUNTS (IMMUTABLE CONTENT) ===================== */
 const DEFAULT_HUNTS = {
   escape: {
     name: "Escape the House",
     intro: "Welcome! Your escape challenge begins now 🏠 Complete the quest to find out what colour ribbons are tied around your presents under the tree.",
     clues: [
-      { clue:"I show your face but I'm not a photo.", keyword:"mirror" },
-      { clue:"I have pages but no homework.", keyword:"book" },
-      { clue:"I keep food safe and cold.", keyword:"fridge" },
-      { clue:"I go round and round but never get dizzy.", keyword:"fan" },
-      { clue:"I have hands but no arms.", keyword:"clock" },
-      { clue:"I hide your feet when you're not home.", keyword:"shoes" },
-      { clue:"I'm soft, comfy, and steal naps.", keyword:"couch" },
-      { clue:"I light the dark when switched on.", keyword:"lamp" },
-      { clue:"I'm full of secrets behind closed doors.", keyword:"closet" },
-      { clue:"The prize is hidden where valuables stay safe.", keyword:"safe" }
+      { clue: "Welcome! Your escape challenge begins now 🏠 Complete the quest to find out what colour ribbons are tied around your presents under the tree.", keyword: "start" },
+      { clue: "I show your face but I'm not a photo.", keyword: "mirror" },
+      { clue: "I have pages but no homework.", keyword: "book" },
+      { clue: "I keep food safe and cold.", keyword: "fridge" },
+      { clue: "I go round and round but never get dizzy.", keyword: "fan" },
+      { clue: "I have hands but no arms.", keyword: "clock" },
+      { clue: "I hide your feet when you're not home.", keyword: "shoes" },
+      { clue: "I'm soft, comfy, and steal naps.", keyword: "couch" },
+      { clue: "I light the dark when switched on.", keyword: "lamp" },
+      { clue: "I'm full of secrets behind closed doors.", keyword: "closet" },
+      { clue: "The prize is hidden where valuables stay safe.", keyword: "safe" }
     ],
-    finish: "🎉 Congratulations! You escaped the house — the ribbon colour on this present is yours."
+    finish: "🎉 Congratulations! You have finished. This present is yours — the ribbon tells you what colour ribbons are tied to your presents under the tree."
   },
 
   fortnite: {
     name: "Fortnite IRL",
     intro: "Drop in! Your real-world Fortnite challenge starts now 🎮",
     clues: [
-      { clue:"Controllers land here after a match.", keyword:"couch" },
-      { clue:"Drinks restore shields here.", keyword:"fridge" },
-      { clue:"Shoes hide here after the storm.", keyword:"closet" },
-      { clue:"Materials are stored with tools.", keyword:"garage" },
-      { clue:"The squad gathers here.", keyword:"living room" },
-      { clue:"You can’t win without sleep.", keyword:"bed" },
-      { clue:"Secrets behind closed doors.", keyword:"cupboard" },
-      { clue:"Devices recharge here.", keyword:"charger" },
-      { clue:"High ground advantage.", keyword:"attic" },
-      { clue:"Where battles are watched.", keyword:"tv" },
-      { clue:"Snacks disappear here.", keyword:"kitchen" },
-      { clue:"Victory Royale location.", keyword:"safe" }
+      { clue: "Controllers land here after a match.", keyword: "couch" },
+      { clue: "Drinks restore shields here.", keyword: "fridge" },
+      { clue: "Shoes hide here after the storm.", keyword: "closet" },
+      { clue: "Materials are stored with tools.", keyword: "garage" },
+      { clue: "The squad gathers here.", keyword: "living room" },
+      { clue: "You can’t win without sleep.", keyword: "bed" },
+      { clue: "Secrets behind closed doors.", keyword: "cupboard" },
+      { clue: "Devices recharge here.", keyword: "charger" },
+      { clue: "High ground advantage.", keyword: "attic" },
+      { clue: "Where battles are watched.", keyword: "tv" },
+      { clue: "Snacks disappear here.", keyword: "kitchen" },
+      { clue: "Victory Royale location.", keyword: "safe" }
     ],
-    finish: "🏆 Victory Royale! The ribbon colour on this present is yours."
+    finish: "🏆 Victory Royale! You completed the hunt!"
   },
 
   hacker: {
     name: "System Breach",
     intro: "⚠️ Incoming transmission… system access required.",
     clues: [
-      { clue:"Device that controls all others.", keyword:"computer" },
-      { clue:"Passwords written but not digital.", keyword:"notebook" },
-      { clue:"Cold data storage.", keyword:"freezer" },
-      { clue:"Where commands are typed.", keyword:"keyboard" },
-      { clue:"Single click changes everything.", keyword:"mouse" },
-      { clue:"Primary power source.", keyword:"plug" },
-      { clue:"Clothes reset location.", keyword:"wardrobe" },
-      { clue:"Backup storage area.", keyword:"external hard drive" },
-      { clue:"Display output surface.", keyword:"monitor" },
-      { clue:"Permission checkpoint.", keyword:"password" },
-      { clue:"Hidden encrypted space.", keyword:"vault" },
-      { clue:"Logs of activity.", keyword:"diary" },
-      { clue:"User rest zone.", keyword:"bedroom" },
-      { clue:"Final access node.", keyword:"router" },
-      { clue:"Root access payload location.", keyword:"server" }
+      { clue: "Device that controls all others.", keyword: "computer" },
+      { clue: "Passwords written but not digital.", keyword: "notebook" },
+      { clue: "Cold data storage.", keyword: "freezer" },
+      { clue: "Where commands are typed.", keyword: "keyboard" },
+      { clue: "Single click changes everything.", keyword: "mouse" },
+      { clue: "Primary power source.", keyword: "plug" },
+      { clue: "Clothes reset location.", keyword: "wardrobe" },
+      { clue: "Backup storage area.", keyword: "external hard drive" },
+      { clue: "Display output surface.", keyword: "monitor" },
+      { clue: "Permission checkpoint.", keyword: "password" },
+      { clue: "Hidden encrypted space.", keyword: "vault" },
+      { clue: "Logs of activity.", keyword: "diary" },
+      { clue: "User rest zone.", keyword: "bedroom" },
+      { clue: "Final access node.", keyword: "router" },
+      { clue: "Root access payload location.", keyword: "server" }
     ],
     finish: "✅ SYSTEM BREACH COMPLETE — ACCESS GRANTED."
   }
 };
 
-/* ================= STORAGE ================= */
+/* ====================== STORAGE FIX ===================== */
 let userHunts = JSON.parse(localStorage.getItem("userHunts") || "{}");
 
-/* 🔧 Persist base hunts for QR/PDF safety */
-Object.keys(DEFAULT_HUNTS).forEach(k=>{
-  if(!userHunts[k]) userHunts[k]=DEFAULT_HUNTS[k];
+// Persist base hunts so QR/PDF works for them
+Object.keys(DEFAULT_HUNTS).forEach(k => {
+  if (!userHunts[k]) userHunts[k] = DEFAULT_HUNTS[k];
 });
 localStorage.setItem("userHunts", JSON.stringify(userHunts));
 
 let HUNTS = { ...DEFAULT_HUNTS, ...userHunts };
-
-const app=document.getElementById("app");
-const q=new URLSearchParams(location.search);
+function save() { localStorage.setItem("userHunts", JSON.stringify(userHunts)); }
 
 /* ================= ROUTER ================= */
-if(q.get("play")) play();
-else if(q.get("edit")) editHunt(q.get("edit"));
-else if(q.get("new")) editHunt();
+const q = new URLSearchParams(location.search);
+const app = document.getElementById("app");
+
+if (q.get("play")) play();
+else if (q.get("view")) viewHunt(q.get("view"));
+else if (q.get("edit")) createHunt(q.get("edit"));
+else if (q.get("new")) createHunt();
 else home();
 
 /* ================= HOME ================= */
-function home(){
-  app.innerHTML=`
-    <h1>Keyword Scavenger Hunts</h1>
+function home() {
+  app.innerHTML = `
+    <h1>QR Scavenger Hunts</h1>
     <button onclick="location='?new=1'">➕ Create New Hunt</button>
     ${Object.entries(HUNTS).map(([k,h])=>`
       <div class="hunt">
         <h3>${h.name}</h3>
         <button onclick="location='?play=${k}&s=0'">▶ Start Hunt</button>
-        <button onclick="location='?edit=${k}'">✏ Edit</button>
-        <button onclick="generatePDF('${k}')">🖨 PDF / QR</button>
+        <button onclick="location='?view=${k}'">👁 View Hunt</button>
+        <button onclick="generatePDF('${k}')">🖨 Generate QR PDF</button>
       </div>
     `).join("")}
   `;
 }
 
+/* ================= VIEW ================= */
+function viewHunt(key) {
+  const h = HUNTS[key];
+  if (!h) return home();
+  app.innerHTML = `
+    <h2>${h.name}</h2>
+    <p>${h.intro}</p>
+    <ol>${h.clues.map(c=>`<li>${c.clue}</li>`).join("")}</ol>
+    <p>${h.finish}</p>
+    <button onclick="home()">⬅ Back</button>
+  `;
+}
+
 /* ================= CREATE / EDIT ================= */
-function editHunt(k){
-  const h=k?HUNTS[k]:{name:"",intro:"",clues:[],finish:""};
-  app.innerHTML=`
-    <h2>${k?"Edit":"Create"} Hunt</h2>
+function createHunt(k) {
+  const h = k ? HUNTS[k] : { name:"", intro:"", clues:[], finish:"" };
+  app.innerHTML = `
+    <h2>${k?"Modify":"Create"} Hunt</h2>
     <input id="name" placeholder="Hunt name" value="${h.name}">
-    <textarea id="intro" placeholder="Intro">${h.intro}</textarea>
+    <textarea id="intro">${h.intro}</textarea>
     <div id="clues"></div>
     <button onclick="addClue()">➕ Add Clue</button>
-    <textarea id="finish" placeholder="Finish">${h.finish}</textarea>
+    <textarea id="finish">${h.finish}</textarea>
     <button onclick="saveHunt('${k||""}')">💾 Save</button>
     <button onclick="home()">Cancel</button>
   `;
   h.clues.forEach(c=>addClue(c.clue,c.keyword));
 }
 
-function addClue(clue="",keyword=""){
+function addClue(clue="",keyword="") {
   const d=document.createElement("div");
   d.className="clue-item";
   d.innerHTML=`
-    <textarea placeholder="Clue">${clue}</textarea>
-    <input placeholder="Keyword" value="${keyword}">
+    <textarea>${clue}</textarea>
+    <input value="${keyword}">
   `;
   document.getElementById("clues").appendChild(d);
 }
 
-function saveHunt(k){
+function saveHunt(k) {
   const name=document.getElementById("name").value.trim();
   const intro=document.getElementById("intro").value.trim();
   const finish=document.getElementById("finish").value.trim();
-  const clues=[...document.querySelectorAll(".clue-item")]
-    .map(d=>({
-      clue:d.querySelector("textarea").value.trim(),
-      keyword:d.querySelector("input").value.trim().toLowerCase()
-    }))
-    .filter(c=>c.clue&&c.keyword);
+  const clues=[...document.querySelectorAll(".clue-item")].map(d=>({
+    clue:d.querySelector("textarea").value,
+    keyword:d.querySelector("input").value
+  }));
 
-  if(!name||!intro||!finish||!clues.length){
-    alert("All fields required"); return;
-  }
-
+  if(!name||!intro||!finish||!clues.length) return alert("All fields required");
   if(!k) k=uid();
   userHunts[k]={name,intro,clues,finish};
-  localStorage.setItem("userHunts",JSON.stringify(userHunts));
-  HUNTS={...DEFAULT_HUNTS,...userHunts};
+  HUNTS[k]=userHunts[k];
+  save();
   home();
 }
 
 /* ================= PLAY ================= */
-function play(){
+function play() {
   const key=q.get("play");
   const h=HUNTS[key];
   const step=parseInt(q.get("s")||0);
 
-  if(step===0) return render(h.intro,"start");
+  if(step===0) return showPage("🎁 Invitation", h.intro);
   if(step<=h.clues.length){
     const c=h.clues[step-1];
-    return render(c.clue,c.keyword);
+    return showPage(`Clue ${step}`, c.clue, c.keyword);
   }
-  render(h.finish,null);
+  showPage("🎉 Finished!", h.finish);
 }
 
-function render(text,keyword){
+function showPage(title,text,keyword=""){
   app.innerHTML=`
+    <h1>${title}</h1>
     <p>${text}</p>
     ${keyword?`
-      <input id="ans" placeholder="Enter keyword">
-      <button onclick="check('${keyword}')">Submit</button>
+      <input id="user-input">
+      <button onclick="checkAnswer('${keyword}')">Submit</button>
     `:""}
   `;
 }
 
-function check(k){
-  const v=document.getElementById("ans").value.trim().toLowerCase();
-  if(v===k){
-    const n=parseInt(q.get("s"))+1;
+function checkAnswer(keyword){
+  const v=document.getElementById("user-input").value.trim().toLowerCase();
+  if(v===keyword.toLowerCase()){
+    const n=parseInt(q.get("s")||0)+1;
     location=`?play=${q.get("play")}&s=${n}`;
-  }else{
+  } else {
     overlay.style.display="flex";
-    document.getElementById("ans").value="";
+    document.getElementById("user-input").value="";
     setTimeout(()=>overlay.style.display="none",2000);
   }
 }
 
-/* ================= PDF / QR ================= */
+/* ================= PDF ================= */
 async function generatePDF(k){
   const {jsPDF}=window.jspdf;
   const pdf=new jsPDF();
@@ -236,14 +255,11 @@ async function generatePDF(k){
   }
 
   pdf.text(h.name,10,20);
-  pdf.text("Scan QR codes in order",10,30);
-
   await page("START",`${base}?play=${k}&s=0`);
   for(let i=0;i<h.clues.length;i++){
     await page(`CLUE ${i+1}`,`${base}?play=${k}&s=${i+1}`);
   }
   await page("FINISH",`${base}?play=${k}&s=${h.clues.length+1}`);
-
   pdf.save(`${h.name}.pdf`);
 }
 </script>
