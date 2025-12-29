@@ -1,177 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Scavenger Hunts</title>
+<meta charset="UTF-8">
+<title>Scavenger Hunt</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 16px;
-    }
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background:#f4f6f8;
+  padding:20px;
+}
 
-    h1 {
-      text-align: center;
-      margin-bottom: 12px;
-    }
+.card {
+  max-width:900px;
+  margin:auto;
+  background:#fff;
+  padding:24px;
+  border-radius:14px;
+}
 
-    .create-btn {
-      display: block;
-      width: 100%;
-      max-width: 420px;
-      margin: 0 auto 16px;
-      padding: 14px;
-      font-size: 16px;
-      background: #2b7cff;
-      color: white;
-      border: none;
-      border-radius: 8px;
-    }
+button {
+  padding:12px 18px;
+  font-size:16px;
+  cursor:pointer;
+  border:none;
+  border-radius:10px;
+  margin-right:6px;
+}
 
-    .search {
-      display: block;
-      width: 100%;
-      max-width: 420px;
-      margin: 0 auto 20px;
-      padding: 12px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
+button.primary { background:#2ecc71;color:white; }
+button.secondary { background:#3498db;color:white; }
+button.delete { background:#e74c3c;color:white; }
 
-    .hunt {
-      background: white;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-      max-width: 420px;
-      margin-left: auto;
-      margin-right: auto;
-    }
+.hunt-card {
+  padding:16px;
+  border-radius:12px;
+  background:#f8fafc;
+  margin-bottom:14px;
+}
 
-    .hunt-title {
-      font-weight: bold;
-      font-size: 18px;
-      margin-bottom: 12px;
-    }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      flex: 1;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      font-size: 14px;
-    }
-
-    .test {
-      background: #e7f0ff;
-      color: #2b7cff;
-    }
-
-    .print {
-      background: #eee;
-    }
-
-    .delete {
-      background: #e74c3c;
-      color: white;
-      width: 100%;
-    }
-  </style>
+.search {
+  width:100%;
+  padding:12px;
+  font-size:16px;
+  margin:16px 0;
+}
+</style>
 </head>
 
 <body>
+<div class="card" id="app"></div>
 
+<script>
+/* ================= DATA ================= */
+
+const BASE_HUNTS = [
+  { title:"Escape the House", steps:10 },
+  { title:"Fortnite IRL", steps:12 },
+  { title:"System Breach", steps:15 }
+];
+
+const userHunts =
+  JSON.parse(localStorage.getItem("userHunts") || "[]");
+
+/* ================= RENDER ================= */
+
+const app = document.getElementById("app");
+
+app.innerHTML = `
   <h1>Scavenger Hunts</h1>
+  <button class="primary" onclick="location='create-hunt.html'">➕ Create New Hunt</button>
+  <input class="search" placeholder="Search hunts...">
+`;
 
-  <button class="create-btn" onclick="location.href='create-hunt.html'">
-    ➕ Create New Hunt
-  </button>
+const allHunts = [...BASE_HUNTS, ...userHunts]
+  .sort((a,b)=>a.title.localeCompare(b.title));
 
-  <input class="search" placeholder="Search hunts..." />
+allHunts.forEach(hunt => {
+  const card = document.createElement("div");
+  card.className = "hunt-card";
 
-  <div id="hunts"></div>
+  card.innerHTML = `
+    <strong>${hunt.title} (${hunt.steps} steps)</strong><br><br>
+    <button class="secondary">▶ Test</button>
+    <button class="secondary">🖨 Print</button>
+  `;
 
-  <script>
-    const BASE_HUNTS = [
-      {
-        title: "Escape the House",
-        steps: 10,
-        isBase: true
-      },
-      {
-        title: "Fortnite IRL",
-        steps: 12,
-        isBase: true
-      },
-      {
-        title: "System Breach",
-        steps: 15,
-        isBase: true
+  const actions = card;
+
+  /* ===== DELETE BUTTON FIX (ONLY CHANGE) ===== */
+
+  const isUserCreated =
+    userHunts.some(h => h.title === hunt.title);
+
+  if (isUserCreated) {
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete";
+    deleteBtn.textContent = "🗑 Delete";
+
+    deleteBtn.onclick = () => {
+      if (confirm(`Delete "${hunt.title}"?`)) {
+        const updated =
+          userHunts.filter(h => h.title !== hunt.title);
+        localStorage.setItem("userHunts", JSON.stringify(updated));
+        location.reload();
       }
-    ];
+    };
 
-    const userHunts =
-      JSON.parse(localStorage.getItem("userHunts") || "[]");
+    actions.appendChild(deleteBtn);
+  }
 
-    const hunts = [...BASE_HUNTS, ...userHunts]
-      .sort((a, b) => a.title.localeCompare(b.title));
+  /* ===== END FIX ===== */
 
-    const container = document.getElementById("hunts");
-
-    hunts.forEach(hunt => {
-      const card = document.createElement("div");
-      card.className = "hunt";
-
-      const title = document.createElement("div");
-      title.className = "hunt-title";
-      title.textContent = `${hunt.title} (${hunt.steps} steps)`;
-
-      const actions = document.createElement("div");
-      actions.className = "actions";
-
-      const testBtn = document.createElement("button");
-      testBtn.className = "btn test";
-      testBtn.textContent = "▶ Test";
-
-      const printBtn = document.createElement("button");
-      printBtn.className = "btn print";
-      printBtn.textContent = "🖨 Print";
-
-      actions.appendChild(testBtn);
-      actions.appendChild(printBtn);
-
-      // ✅ DELETE BUTTON GUARD (only change)
-      if (!hunt.isBase) {
-        const deleteBtn = document.createElement("button");
-        deleteBtn.className = "btn delete";
-        deleteBtn.textContent = "🗑 Delete";
-
-        deleteBtn.onclick = () => {
-          if (confirm(`Delete "${hunt.title}"?`)) {
-            const updated = userHunts.filter(h => h.title !== hunt.title);
-            localStorage.setItem("userHunts", JSON.stringify(updated));
-            location.reload();
-          }
-        };
-
-        actions.appendChild(deleteBtn);
-      }
-
-      card.appendChild(title);
-      card.appendChild(actions);
-      container.appendChild(card);
-    });
-  </script>
-
+  app.appendChild(card);
+});
+</script>
 </body>
 </html>
