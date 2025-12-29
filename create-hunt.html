@@ -2,82 +2,67 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Create Scavenger Hunt</title>
+<title>Create New Scavenger Hunt</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body{
-  font-family:system-ui,sans-serif;
-  background:linear-gradient(180deg,#eef2f7,#f4f6f8);
+body {
+  font-family: system-ui, sans-serif;
+  background: linear-gradient(180deg,#eef2f7,#f4f6f8);
   padding:20px;
 }
 
-.card{
+.card {
   max-width:900px;
   margin:auto;
   background:#fff;
   padding:24px;
-  border-radius:16px;
+  border-radius:14px;
 }
 
-h1,h2{ text-align:center; }
+h1 { margin-top:0; }
 
-select,input,textarea,button{
-  padding:12px;
-  font-size:16px;
+label {
+  font-weight:600;
+  margin-top:18px;
+  display:block;
+}
+
+select, input, textarea {
   width:100%;
+  padding:14px;
+  font-size:16px;
   margin-top:8px;
-  border-radius:10px;
+  border-radius:8px;
   border:1px solid #ccc;
 }
 
-textarea{ min-height:70px; resize:vertical; }
-
-button{
+button {
+  padding:10px 14px;
+  font-size:16px;
   cursor:pointer;
   border:none;
+  border-radius:8px;
 }
 
-.primary{ background:#2ecc71;color:#fff; }
-.secondary{ background:#3498db;color:#fff; }
-.danger{ background:#e74c3c;color:#fff; }
-.ai{ background:#9b59b6;color:#fff; }
+.primary { background:#2ecc71; color:white; }
+.secondary { background:#3498db; color:white; }
+.danger { background:#e74c3c; color:white; }
 
-.clue-card{
+.clue-item {
   background:#f8fafc;
-  border-radius:14px;
-  padding:16px;
-  margin-top:16px;
-  transition:transform .2s ease;
+  padding:14px;
+  border-radius:10px;
+  margin-top:12px;
 }
 
-.clue-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  font-weight:700;
+.controls button {
+  margin-right:6px;
 }
 
-.controls button{
-  width:auto;
-  margin-left:6px;
-  padding:6px 10px;
-  font-size:14px;
-}
-
-.small{
+.small {
   font-size:14px;
   color:#555;
-  margin-top:4px;
-}
-
-.fade-move{
-  animation:move .2s ease;
-}
-
-@keyframes move{
-  from{transform:scale(.98)}
-  to{transform:scale(1)}
 }
 </style>
 </head>
@@ -85,154 +70,135 @@ button{
 <body>
 
 <div class="card">
-<h1>🛠 Create a New Scavenger Hunt</h1>
+  <h1>Create New Scavenger Hunt</h1>
 
-<h2>Hunt Details</h2>
-<input id="huntName" placeholder="Hunt name">
+  <label>Hunt Name</label>
+  <input id="huntName" placeholder="My Awesome Hunt">
 
-<select id="theme">
-  <option value="">Select theme</option>
-  <option>Escape</option>
-  <option>Fortnite</option>
-  <option>Hacker</option>
-  <option>Adventure</option>
-  <option>Custom</option>
-</select>
+  <hr>
 
-<hr>
+  <label>Select Existing Hunt</label>
+  <select id="huntSelect">
+    <option value="">— Select Hunt —</option>
+  </select>
 
-<h2>Add Clues</h2>
+  <label>Select Existing Clue</label>
+  <select id="clueSelect" disabled>
+    <option value="">— Select Clue —</option>
+  </select>
 
-<select id="huntSelect">
-  <option value="">Use clue from existing hunt…</option>
-</select>
+  <button class="secondary" onclick="addExistingClue()">➕ Add Selected Clue</button>
 
-<select id="clueSelect" disabled>
-  <option value="">Select clue…</option>
-</select>
+  <hr>
 
-<button class="secondary" onclick="addExistingClue()">Add Selected Clue</button>
+  <label>Write Your Own Clue</label>
+  <textarea id="customClue" placeholder="Clue text..."></textarea>
 
-<hr>
+  <label>Clue Location</label>
+  <input id="customLocation" placeholder="Where will this be hidden?">
 
-<button class="primary" onclick="addBlankClue()">➕ Write Your Own Clue</button>
+  <button class="secondary" onclick="addCustomClue()">➕ Add Custom Clue</button>
 
-<div id="clues"></div>
+  <hr>
 
-<hr>
+  <h2>Clues in This Hunt</h2>
+  <div id="clueList"></div>
 
-<p class="small">
-QR codes, answer codes, and printable PDFs will be generated after saving (not yet implemented).
-</p>
+  <p class="small">
+    Reorder clues using the arrows.  
+    Saving will later generate codes, QR sheets, and PDFs.
+  </p>
 
-<button class="primary" style="margin-top:20px" disabled>
-💾 Save Hunt (coming next)
-</button>
-
+  <button class="primary" disabled>💾 Save Hunt (disabled for now)</button>
 </div>
 
 <script>
-/* ===== Load existing hunts (read-only) ===== */
-const BASE_HUNTS = JSON.parse(localStorage.getItem("hunts")||"[]");
+/* ===== Load Existing Hunts (read-only) ===== */
+const existingHunts = JSON.parse(localStorage.getItem("hunts") || "[]");
 
 const huntSelect = document.getElementById("huntSelect");
 const clueSelect = document.getElementById("clueSelect");
-const cluesDiv = document.getElementById("clues");
+const clueList = document.getElementById("clueList");
 
-let clues = [];
+let workingClues = [];
 
 /* Populate hunt dropdown */
-BASE_HUNTS.forEach(h=>{
-  const o=document.createElement("option");
-  o.value=h.id;
-  o.textContent=h.name;
-  huntSelect.appendChild(o);
+existingHunts.forEach((h, i) => {
+  const opt = document.createElement("option");
+  opt.value = i;
+  opt.textContent = h.name;
+  huntSelect.appendChild(opt);
 });
 
-huntSelect.onchange=()=>{
-  clueSelect.innerHTML='<option value="">Select clue…</option>';
-  clueSelect.disabled=true;
-  const h=BASE_HUNTS.find(x=>x.id===huntSelect.value);
-  if(!h) return;
-  h.steps.forEach((s,i)=>{
-    const o=document.createElement("option");
-    o.value=i;
-    o.textContent=`${s.clue} (${s.location})`;
-    clueSelect.appendChild(o);
-  });
-  clueSelect.disabled=false;
-};
+/* Populate clues when hunt selected */
+huntSelect.addEventListener("change", () => {
+  clueSelect.innerHTML = `<option value="">— Select Clue —</option>`;
+  clueSelect.disabled = !huntSelect.value;
 
-/* ===== Add clues ===== */
+  if (!huntSelect.value) return;
+
+  const hunt = existingHunts[huntSelect.value];
+  hunt.steps.forEach((s, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = `${s.clue}  (${s.location})`;
+    clueSelect.appendChild(opt);
+  });
+});
+
+/* Add existing clue */
 function addExistingClue(){
-  const h=BASE_HUNTS.find(x=>x.id===huntSelect.value);
-  if(!h || clueSelect.value==="") return;
-  const s=h.steps[clueSelect.value];
-  clues.push({clue:s.clue,location:s.location});
+  if(!huntSelect.value || !clueSelect.value) return;
+
+  const h = existingHunts[huntSelect.value];
+  const s = h.steps[clueSelect.value];
+
+  workingClues.push({ clue:s.clue, location:s.location });
   render();
 }
 
-function addBlankClue(){
-  clues.push({clue:"",location:""});
+/* Add custom clue */
+function addCustomClue(){
+  const clue = document.getElementById("customClue").value.trim();
+  const location = document.getElementById("customLocation").value.trim();
+  if(!clue || !location) return;
+
+  workingClues.push({ clue, location });
+  document.getElementById("customClue").value = "";
+  document.getElementById("customLocation").value = "";
   render();
 }
 
-/* ===== Render clues ===== */
+/* Render working list */
 function render(){
-  cluesDiv.innerHTML="";
-  clues.forEach((c,i)=>{
-    const d=document.createElement("div");
-    d.className="clue-card fade-move";
-    d.innerHTML=`
-      <div class="clue-header">
-        <span>Clue ${i+1}</span>
-        <div class="controls">
-          <button onclick="move(${i},-1)">⬆</button>
-          <button onclick="move(${i},1)">⬇</button>
-          <button class="danger" onclick="removeClue(${i})">✖</button>
-        </div>
+  clueList.innerHTML = "";
+  workingClues.forEach((c,i)=>{
+    const div = document.createElement("div");
+    div.className = "clue-item";
+    div.innerHTML = `
+      <strong>${i+1}. ${c.clue}</strong><br>
+      <span class="small">Location: ${c.location}</span>
+      <div class="controls">
+        <button onclick="move(${i},-1)">⬆</button>
+        <button onclick="move(${i},1)">⬇</button>
+        <button class="danger" onclick="removeClue(${i})">✖</button>
       </div>
-
-      <label>Clue</label>
-      <textarea oninput="clues[${i}].clue=this.value">${c.clue}</textarea>
-
-      <label>Location</label>
-      <input value="${c.location}" oninput="clues[${i}].location=this.value">
-
-      <div class="small">Theme: ${document.getElementById("theme").value||"—"}</div>
-
-      <button class="ai" onclick="aiSuggest(${i})">🤖 Get AI Suggestion</button>
-      <button class="secondary" onclick="aiRewrite(${i})">♻ Rewrite This Clue</button>
     `;
-    cluesDiv.appendChild(d);
+    clueList.appendChild(div);
   });
 }
 
-/* ===== Reorder ===== */
+/* Reorder */
 function move(i,dir){
-  const n=i+dir;
-  if(n<0||n>=clues.length) return;
-  [clues[i],clues[n]]=[clues[n],clues[i]];
+  const j = i + dir;
+  if(j < 0 || j >= workingClues.length) return;
+  [workingClues[i], workingClues[j]] = [workingClues[j], workingClues[i]];
   render();
 }
 
+/* Remove */
 function removeClue(i){
-  clues.splice(i,1);
-  render();
-}
-
-/* ===== AI UI stubs ===== */
-function aiSuggest(i){
-  const theme=document.getElementById("theme").value||"Adventure";
-  if(clues[i].clue||clues[i].location) return alert("Clear fields to auto-generate.");
-  clues[i].clue=`(${theme} AI) Find the place that fits this theme best.`;
-  clues[i].location="Example Location";
-  render();
-}
-
-function aiRewrite(i){
-  if(!clues[i].clue) return;
-  clues[i].clue += " (refined)";
+  workingClues.splice(i,1);
   render();
 }
 </script>
