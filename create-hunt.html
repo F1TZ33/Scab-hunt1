@@ -2,235 +2,249 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Create New Scavenger Hunt</title>
+<title>Create New Hunt</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 body {
   font-family: system-ui, sans-serif;
-  background: linear-gradient(135deg, #eef2f7, #f9fbff);
-  padding: 20px;
+  background: linear-gradient(180deg,#eef2f7,#f4f6f8);
+  padding:20px;
 }
 
-.container {
-  max-width: 1000px;
-  margin: auto;
-  background: #fff;
-  border-radius: 14px;
-  padding: 24px;
+.card {
+  max-width:900px;
+  margin:auto;
+  background:#fff;
+  padding:24px;
+  border-radius:14px;
 }
 
-h1 {
-  text-align: center;
-  margin-bottom: 6px;
-}
+h1 { margin-top:0; }
 
-.subtitle {
-  text-align: center;
-  color: #666;
-  margin-bottom: 24px;
-}
-
-/* Theme selector */
-.themes {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 14px;
-  margin-bottom: 30px;
-}
-
-.theme {
-  border: 2px solid #ddd;
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.theme:hover {
-  border-color: #4f8cff;
-}
-
-.theme span {
-  display: block;
-  font-size: 28px;
-  margin-bottom: 6px;
-}
-
-/* Inputs */
 label {
-  font-weight: bold;
-  display: block;
-  margin-top: 20px;
-  margin-bottom: 6px;
+  font-weight:600;
+  display:block;
+  margin-top:18px;
 }
 
-input[type="text"], textarea, select {
-  width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 16px;
-}
-
-textarea {
-  resize: vertical;
-}
-
-/* Steps */
-.steps {
-  margin-top: 30px;
-}
-
-.step-card {
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 18px;
-  margin-bottom: 18px;
-  background: #fafbfc;
-}
-
-.step-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.step-number {
-  font-weight: bold;
-  font-size: 18px;
-}
-
-.remove {
-  background: none;
-  border: none;
-  color: #c00;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.or {
-  text-align: center;
-  margin: 12px 0;
-  font-weight: bold;
-  color: #777;
-}
-
-/* Buttons */
-.actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 30px;
+select, textarea, input {
+  width:100%;
+  padding:14px;
+  font-size:16px;
+  margin-top:8px;
+  border-radius:8px;
+  border:1px solid #ccc;
 }
 
 button {
-  padding: 14px 20px;
-  font-size: 16px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
+  padding:12px 16px;
+  font-size:16px;
+  border-radius:8px;
+  border:none;
+  cursor:pointer;
 }
 
-.add-step {
-  background: #eee;
+button.primary {
+  background:#2ecc71;
+  color:white;
+  margin-top:16px;
 }
 
-.preview {
-  background: #4caf50;
-  color: white;
+button.secondary {
+  background:#3498db;
+  color:white;
+  margin-top:12px;
 }
 
-.back {
-  background: #bbb;
+.mode-toggle {
+  display:flex;
+  gap:12px;
+  margin-top:10px;
 }
 
-/* Preview panel */
-.preview-panel {
-  margin-top: 40px;
-  border-top: 2px dashed #ddd;
-  padding-top: 20px;
+.mode-toggle button {
+  flex:1;
+  background:#f0f3f6;
 }
 
-.preview-panel h2 {
-  text-align: center;
+.mode-toggle button.active {
+  background:#3498db;
+  color:white;
 }
 
-.preview-item {
-  margin-bottom: 12px;
-  padding: 10px;
-  border-radius: 8px;
-  background: #f4f6f8;
+.clue-list {
+  margin-top:24px;
+}
+
+.clue-card {
+  background:#f8fafc;
+  border-radius:12px;
+  padding:16px;
+  margin-bottom:12px;
+  transition:transform 0.2s ease, opacity 0.2s ease;
+}
+
+.clue-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+}
+
+.step {
+  font-weight:700;
+}
+
+.controls button {
+  margin-left:6px;
+}
+
+.badge {
+  font-size:12px;
+  background:#e1e8ed;
+  padding:4px 8px;
+  border-radius:999px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
+<div class="card">
+  <h1>Create New Scavenger Hunt</h1>
 
-  <h1>🛠 Create a New Scavenger Hunt</h1>
-  <div class="subtitle">Build your hunt step-by-step</div>
+  <label>Hunt Name</label>
+  <input placeholder="Enter hunt name">
 
-  <!-- Theme Selection -->
-  <label>Select a Theme</label>
-  <div class="themes">
-    <div class="theme"><span>🎮</span>Fortnite</div>
-    <div class="theme"><span>🟣</span>Escape</div>
-    <div class="theme"><span>🧠</span>Hacker</div>
-    <div class="theme"><span>🎄</span>Festive</div>
-    <div class="theme"><span>🎨</span>Custom</div>
+  <label>Theme</label>
+  <select>
+    <option>Escape</option>
+    <option>Fortnite</option>
+    <option>Hacker</option>
+    <option>Neutral</option>
+    <option>Custom</option>
+  </select>
+
+  <label>Add a Clue</label>
+  <div class="mode-toggle">
+    <button id="useExisting" class="active">Use Existing Clue</button>
+    <button id="useCustom">Write My Own</button>
   </div>
 
-  <!-- Hunt Title -->
-  <label>Hunt Title</label>
-  <input type="text" placeholder="Enter hunt name">
+  <div id="existingPanel">
+    <label>Select Hunt</label>
+    <select id="huntSelect"></select>
 
-  <!-- Steps -->
-  <div class="steps">
-    <h2>Steps</h2>
-
-    <div class="step-card">
-      <div class="step-header">
-        <div class="step-number">Step 1</div>
-        <button class="remove">✖ Remove</button>
-      </div>
-
-      <label>Use an existing clue</label>
-      <select>
-        <option>— Select from existing hunts —</option>
-        <option>Escape the House → Mirror clue</option>
-        <option>Fortnite IRL → Storm incoming</option>
-        <option>System Breach → SYSTEM ONLINE</option>
-      </select>
-
-      <div class="or">OR</div>
-
-      <label>Write your own clue</label>
-      <textarea rows="3" placeholder="Enter your custom clue"></textarea>
-
-      <label>Location Label</label>
-      <input type="text" placeholder="Where this clue is hidden">
-    </div>
-
+    <label>Select Clue</label>
+    <select id="clueSelect"></select>
   </div>
 
-  <!-- Actions -->
-  <div class="actions">
-    <button class="add-step">➕ Add Step</button>
-    <button class="preview">👁 Preview</button>
-    <button class="back" onclick="location.href='index.html'">⬅ Back</button>
+  <div id="customPanel" style="display:none">
+    <label>Clue Text</label>
+    <textarea rows="3" placeholder="Write your clue here..."></textarea>
   </div>
 
-  <!-- Preview -->
-  <div class="preview-panel">
-    <h2>Preview</h2>
-    <div class="preview-item">Step 1: [Clue preview appears here]</div>
-  </div>
+  <button class="secondary" onclick="addClue()">➕ Add Clue</button>
 
+  <div class="clue-list" id="clueList"></div>
+
+  <button class="primary" disabled>💾 Save Hunt (disabled for UI testing)</button>
 </div>
+
+<script>
+/* ===== LOAD EXISTING HUNTS (READ ONLY) ===== */
+const hunts = JSON.parse(localStorage.getItem("hunts") || "[]");
+
+const huntSelect = document.getElementById("huntSelect");
+const clueSelect = document.getElementById("clueSelect");
+
+hunts.forEach((h,i)=>{
+  const opt = document.createElement("option");
+  opt.value = i;
+  opt.textContent = h.name;
+  huntSelect.appendChild(opt);
+});
+
+function populateClues(){
+  clueSelect.innerHTML = "";
+  const h = hunts[huntSelect.value];
+  if(!h) return;
+  h.steps.forEach((s,i)=>{
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = s.clue;
+    clueSelect.appendChild(opt);
+  });
+}
+huntSelect.addEventListener("change", populateClues);
+populateClues();
+
+/* ===== MODE TOGGLE ===== */
+const useExisting = document.getElementById("useExisting");
+const useCustom = document.getElementById("useCustom");
+const existingPanel = document.getElementById("existingPanel");
+const customPanel = document.getElementById("customPanel");
+
+useExisting.onclick = ()=>{
+  useExisting.classList.add("active");
+  useCustom.classList.remove("active");
+  existingPanel.style.display="block";
+  customPanel.style.display="none";
+};
+
+useCustom.onclick = ()=>{
+  useCustom.classList.add("active");
+  useExisting.classList.remove("active");
+  existingPanel.style.display="none";
+  customPanel.style.display="block";
+};
+
+/* ===== CLUE LIST ===== */
+const clueList = document.getElementById("clueList");
+let clues = [];
+
+function render(){
+  clueList.innerHTML = "";
+  clues.forEach((c,i)=>{
+    const div = document.createElement("div");
+    div.className="clue-card";
+    div.innerHTML = `
+      <div class="clue-header">
+        <div class="step">Step ${i+1}</div>
+        <div class="controls">
+          <button onclick="move(${i},-1)" ${i===0?"disabled":""}>⬆️</button>
+          <button onclick="move(${i},1)" ${i===clues.length-1?"disabled":""}>⬇️</button>
+        </div>
+      </div>
+      <div>${c.text}</div>
+      <div class="badge">${c.source}</div>
+    `;
+    clueList.appendChild(div);
+  });
+}
+
+function addClue(){
+  if(useExisting.classList.contains("active")){
+    const h = hunts[huntSelect.value];
+    const s = h.steps[clueSelect.value];
+    clues.push({ text:s.clue, source:`From "${h.name}"` });
+  } else {
+    const t = customPanel.querySelector("textarea").value.trim();
+    if(!t) return;
+    clues.push({ text:t, source:"Custom" });
+    customPanel.querySelector("textarea").value="";
+  }
+  render();
+}
+
+function move(i,dir){
+  const target = i + dir;
+  if(target<0 || target>=clues.length) return;
+  [clues[i], clues[target]] = [clues[target], clues[i]];
+  render();
+}
+</script>
 
 </body>
 </html>
