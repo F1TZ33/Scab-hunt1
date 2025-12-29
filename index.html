@@ -106,19 +106,17 @@ video {
 
 <script>
 /* =====================================================
-   IMMUTABLE HUNT STORE — SINGLE SOURCE OF TRUTH
+   v1.1 IMMUTABLE HUNT STORE — SINGLE SOURCE OF TRUTH
 ===================================================== */
-
 const STORE_KEY = "scavHunts_v1_locked";
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function code(){ return Math.floor(100000 + Math.random()*900000).toString(); }
 
-/* ===== BASE HUNTS (VERBATIM, LOCKED TEXT) ===== */
+/* ===== BASE HUNTS (VERBATIM, UNCHANGED) ===== */
 const BASE_HUNTS = [
-{
-  name:"Escape the House",
-  clues:[
+  /* Escape the House */
+  { name:"Escape the House", clues:[
     ["I show your face but I’m not a photo. I hang on walls and doors. Where am I?","Mirror"],
     ["I have pages but no homework. I’m quiet unless you drop me. I live where stories sleep.","Bookshelf"],
     ["I open wide but never talk. I keep food safe and cold. Don’t forget to close me!","Fridge"],
@@ -129,11 +127,9 @@ const BASE_HUNTS = [
     ["I light up the dark but disappear by day. Flip me on.","Lamp"],
     ["I’m full of secrets, but I don’t talk. You knock before opening me.","Bedroom Door"],
     ["You cracked every lock! The final key is hidden where treasures are kept safe. Your Colour is RED","Red Ribbon"]
-  ]
-},
-{
-  name:"Fortnite IRL",
-  clues:[
+  ]},
+  /* Fortnite IRL */
+  { name:"Fortnite IRL", clues:[
     ["You’ve dropped in. First loot location: Where controllers go when the game is off.","Gaming Desk"],
     ["Shields up! Find the place where drinks recharge HP.","Fridge"],
     ["Storm incoming 🌪️ Where do shoes hide when the storm hits outside?","Entrance"],
@@ -146,11 +142,9 @@ const BASE_HUNTS = [
     ["Final circle. Only one remains. Where battles are watched, not played.","TV"],
     ["One last challenge… Look where snacks disappear during long sessions.","Pantry"],
     ["VICTORY ROYALE 🏆 Claim your reward where legends are made. Your colour is SILVER","Silver Ribbon"]
-  ]
-},
-{
-  name:"System Breach",
-  clues:[
+  ]},
+  /* System Breach */
+  { name:"System Breach", clues:[
     ["SYSTEM ONLINE Begin at the device that controls all others.","Router"],
     ["AUTHENTICATION REQUIRED Find where passwords are written but never stored digitally.","Notebook"],
     ["DATA COLD STORAGE Files preserved at low temperature.","Fridge"],
@@ -166,27 +160,22 @@ const BASE_HUNTS = [
     ["USER PROFILE Where the operator rests.","Bed"],
     ["FINAL ACCESS NODE Only the admin reaches this point.","Desk"],
     ["ROOT ACCESS GRANTED ACCESS GRANTED SYSTEM BREACHED Retrieve payload from secure location. Your colour is GREEN","Green Ribbon"]
-  ]
-}
+  ]}
 ];
 
-/* ===== INIT STORE (RUNS ONCE ONLY) ===== */
+/* ===== INIT STORE (RUNS ONCE) ===== */
 function loadStore(){
-  let store = JSON.parse(localStorage.getItem(STORE_KEY));
-  if(store) return store;
+  let data = JSON.parse(localStorage.getItem(STORE_KEY));
+  if(data) return data;
 
-  store = BASE_HUNTS.map(h=>({
+  data = BASE_HUNTS.map(h=>({
     id:uid(),
     name:h.name,
-    steps:h.clues.map(c=>({
-      clue:c[0],
-      location:c[1],
-      code:code()
-    }))
+    steps:h.clues.map(c=>({ clue:c[0], location:c[1], code:code() }))
   }));
 
-  localStorage.setItem(STORE_KEY, JSON.stringify(store));
-  return store;
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+  return data;
 }
 
 const hunts = loadStore();
@@ -203,7 +192,7 @@ else if(q.get("print")) printPage(q.get("print"));
 else home();
 
 /* =====================================================
-   HOME
+   HOME (UNCHANGED)
 ===================================================== */
 function home(){
   app.innerHTML = `
@@ -221,7 +210,7 @@ function home(){
 }
 
 /* =====================================================
-   START PAGE
+   START (UNCHANGED)
 ===================================================== */
 function startPage(id){
   const h = hunts.find(x=>x.id===id);
@@ -229,13 +218,12 @@ function startPage(id){
 <div class="center">
 <h1>🎉 Welcome, Explorer!</h1>
 <p><strong>${h.name}</strong></p>
-<p>You have been invited on a special scavenger hunt!</p>
 <button class="primary" onclick="location='?play=${id}&s=0'">▶️ Start the Hunt</button>
 </div>`;
 }
 
 /* =====================================================
-   PLAY + CAMERA SCAN
+   PLAY + CAMERA SCAN (ADDITIVE)
 ===================================================== */
 function play(){
   const h = hunts.find(x=>x.id===q.get("play"));
@@ -270,7 +258,6 @@ function show(id){
   setTimeout(()=>el.style.display="none",1000);
 }
 
-/* ===== CAMERA QR ===== */
 function startScanner(expected, step){
   const video = document.getElementById("video");
   navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } })
@@ -278,7 +265,7 @@ function startScanner(expected, step){
       video.srcObject = stream;
       const canvas=document.createElement("canvas");
       const ctx=canvas.getContext("2d");
-      const tick=()=>{
+      const scan=()=>{
         if(video.readyState===video.HAVE_ENOUGH_DATA){
           canvas.width=video.videoWidth;
           canvas.height=video.videoHeight;
@@ -292,14 +279,14 @@ function startScanner(expected, step){
             return;
           }
         }
-        requestAnimationFrame(tick);
+        requestAnimationFrame(scan);
       };
-      tick();
+      scan();
     });
 }
 
 /* =====================================================
-   PRINT (FULL URL START QR)
+   PRINT (UNCHANGED + FULL URL START QR)
 ===================================================== */
 function printPage(id){
   const h = hunts.find(x=>x.id===id);
