@@ -1,221 +1,254 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
 <title>Scavenger Hunt</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
-body{font-family:system-ui;background:#f4f6f8;padding:20px}
-.card{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:12px}
-.hunt{border:1px solid #ddd;padding:12px;border-radius:8px;margin-bottom:12px}
-button{margin:6px;padding:8px 14px}
-input{width:100%;padding:8px;margin:6px 0}
-
-.overlay{
-  position:fixed;inset:0;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  font-size:28px;
-  font-weight:bold;
-  z-index:999;
+body {
+  font-family: system-ui, sans-serif;
+  background: #f4f6f8;
+  padding: 20px;
 }
-
-.overlay.wrong{
-  background:rgba(180,0,0,.75);
-  color:#fff;
+.card {
+  max-width: 900px;
+  margin: auto;
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
 }
-
-.overlay.correct{
-  background:rgba(0,150,0,.75);
-  color:#fff;
+button {
+  padding: 10px 16px;
+  font-size: 16px;
+  cursor: pointer;
 }
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: bold;
+  color: white;
+  z-index: 1000;
+}
+.overlay.wrong { background: rgba(200,0,0,0.8); }
+.overlay.correct { background: rgba(0,150,0,0.8); }
 
-.print-page{page-break-after:always}
-.qr-grid{display:grid;grid-template-columns:repeat(auto-fill,120px);gap:20px}
-.qr-item{text-align:center;font-size:12px}
-
-@media print{button{display:none}}
+.print-page {
+  page-break-after: always;
+}
+.print-item {
+  margin-bottom: 16px;
+}
+.notes {
+  border: 1px dashed #aaa;
+  height: 40px;
+  margin-top: 4px;
+}
+@media print {
+  button { display:none; }
+}
 </style>
 </head>
 
 <body>
+
 <div class="card" id="app"></div>
 
-<div class="overlay wrong" id="wrongOverlay">❌ Wrong code — try again</div>
-<div class="overlay correct" id="correctOverlay">✅ Correct! Moving on…</div>
+<div id="wrong" class="overlay wrong">❌ Try Again</div>
+<div id="correct" class="overlay correct">✅ Correct!</div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
 <script>
-/* ---------- Utilities ---------- */
-const genCode=()=>Math.floor(100000+Math.random()*900000).toString();
-
-/* ---------- Base Hunts ---------- */
-const BASE={
-escape:{name:"Escape the House",steps:[
-["I show your face but I’m not a photo.","mirror"],
-["I have pages but no homework.","bookshelf"],
-["I open wide but never talk.","fridge"],
-["I go round and round.","washing machine"],
-["I have hands but no arms.","clock"],
-["I hide your feet.","shoe rack"],
-["I steal naps.","couch"],
-["I light the dark.","lamp"],
-["You knock before opening.","bedroom door"],
-["Final key location.","treasure spot"]
-]},
-fortnite:{name:"Fortnite IRL",steps:[
-["Controllers sleep here.","gaming desk"],
-["Drinks recharge HP.","fridge"],
-["Shoes hide here.","entrance"],
-["Tools live here.","garage"],
-["Family chill zone.","lounge room"],
-["Sleep to win.","bed"],
-["Secrets behind doors.","wardrobe"],
-["Devices recharge.","phone charger"],
-["High ground wins.","stairs"],
-["Battles are watched.","tv"],
-["Snacks disappear.","pantry"],
-["Victory location.","treasure spot"]
-]},
-hacker:{name:"System Breach",steps:[
-["Controls all devices.","router"],
-["Passwords written.","notebook"],
-["Cold storage.","fridge"],
-["Commands typed.","keyboard"],
-["One click changes all.","mouse"],
-["Power source.","power board"],
-["Clothes reset.","laundry"],
-["Backup location.","garage"],
-["Pixels form reality.","monitor"],
-["Permission required.","door"],
-["Locked & hidden.","drawer"],
-["Tracks time.","clock"],
-["Operator rests.","bed"],
-["Admin only.","desk"],
-["Payload location.","treasure spot"]
-]}
-};
-
-/* ---------- Storage Init ---------- */
-let hunts=JSON.parse(localStorage.getItem("hunts")||"null");
-if(!hunts){
-  hunts={};
-  for(const k in BASE){
-    hunts[k]={
-      name:BASE[k].name,
-      clues:BASE[k].steps.map(s=>({
-        clue:s[0],
-        location:s[1],
-        code:genCode()
-      }))
-    };
-  }
-  localStorage.setItem("hunts",JSON.stringify(hunts));
+/* ================== UTIL ================== */
+function uid() {
+  return Math.random().toString(36).slice(2,9);
+}
+function randomCode() {
+  return Math.floor(100000 + Math.random()*900000).toString();
 }
 
-/* ---------- Router ---------- */
-const q=new URLSearchParams(location.search);
-const app=document.getElementById("app");
+/* ================== SEED DATA ================== */
+const BASE_HUNTS = [
+{
+  name:"Escape the House",
+  clues:[
+    ["I show your face but I’m not a photo.","mirror"],
+    ["I have pages but no homework.","bookshelf"],
+    ["I keep food cold.","fridge"],
+    ["I go round and round.","washing machine"],
+    ["I have hands but no arms.","clock"],
+    ["I hide your shoes.","shoe rack"],
+    ["I steal naps.","couch"],
+    ["I light the dark.","lamp"],
+    ["You knock before opening.","bedroom door"],
+    ["Final prize location","red"]
+  ]
+},
+{
+  name:"Fortnite IRL",
+  clues:[
+    ["Controllers rest here.","gaming desk"],
+    ["Drinks recharge HP.","fridge"],
+    ["Shoes hide here.","entrance"],
+    ["Tools live here.","garage"],
+    ["Family chill zone.","lounge room"],
+    ["Sleep is key.","bed"],
+    ["Secrets behind doors.","wardrobe"],
+    ["Devices recharge.","phone charger"],
+    ["High ground.","stairs"],
+    ["Battles are watched.","tv"],
+    ["Snacks vanish here.","pantry"],
+    ["Victory reward","silver"]
+  ]
+},
+{
+  name:"System Breach",
+  clues:[
+    ["Controls the network.","router"],
+    ["Passwords written.","notebook"],
+    ["Cold data storage.","fridge"],
+    ["Commands typed.","keyboard"],
+    ["Single click.","mouse"],
+    ["Power source.","power board"],
+    ["Clothes reset.","laundry"],
+    ["Backup location.","garage"],
+    ["Pixels form here.","monitor"],
+    ["Permission entry.","door"],
+    ["Hidden storage.","drawer"],
+    ["Tracks time.","clock"],
+    ["Operator rests.","bed"],
+    ["Admin access.","desk"],
+    ["Payload retrieved","green"]
+  ]
+}
+];
 
-if(q.get("play")) play();
-else if(q.get("start")) start();
-else if(q.get("print")) printPage(q.get("print"));
+/* ================== INIT ================== */
+let hunts = JSON.parse(localStorage.getItem("hunts") || "[]");
+
+if (!localStorage.getItem("huntsInitialized")) {
+  hunts = BASE_HUNTS.map(h => ({
+    id: uid(),
+    name: h.name,
+    steps: h.clues.map(c => ({
+      clue: c[0],
+      location: c[1],
+      code: randomCode()
+    }))
+  }));
+  localStorage.setItem("hunts", JSON.stringify(hunts));
+  localStorage.setItem("huntsInitialized","true");
+}
+
+const q = new URLSearchParams(location.search);
+const app = document.getElementById("app");
+
+/* ================== ROUTER ================== */
+if (q.get("start")) startPage(q.get("start"));
+else if (q.get("play")) play();
+else if (q.get("print")) printPage(q.get("print"));
 else home();
 
-/* ---------- Home ---------- */
+/* ================== HOME ================== */
 function home(){
-  app.innerHTML=`<h1>Scavenger Hunts</h1>
-  ${Object.entries(hunts).map(([k,h])=>`
-    <div class="hunt">
-      <h3>${h.name}</h3>
-      <button onclick="location='?start=${k}'">▶ Start (Test)</button>
-      <button onclick="location='?print=${k}'">🖨 Print Instructions</button>
-    </div>`).join("")}`;
+  app.innerHTML = `
+    <h1>Scavenger Hunts</h1>
+    ${hunts.map(h=>`
+      <div>
+        <h3>${h.name}</h3>
+        <button onclick="location='?start=${h.id}'">▶ Test Start</button>
+        <button onclick="location='?print=${h.id}'">🖨 Print Instructions</button>
+      </div>
+    `).join("")}
+  `;
 }
 
-/* ---------- Start Page ---------- */
-function start(){
-  const k=q.get("start");
-  const h=hunts[k];
-  app.innerHTML=`
-  <h2>🎉 Welcome to the ${h.name}!</h2>
-  <p>
-    You’ve been invited on a scavenger hunt!  
-    Hidden around the house are secret QR codes.  
-    Find the right place, scan the code, and enter the number to unlock the next clue.
-  </p>
-  <p>Work together, think carefully, and most of all — have fun!</p>
-  <button onclick="location='?play=${k}&s=0'">🚀 Start the Hunt</button>`;
+/* ================== START PAGE ================== */
+function startPage(id){
+  const h = hunts.find(x=>x.id===id);
+  app.innerHTML = `
+    <h1>🎉 Welcome, Explorer!</h1>
+    <p>You have been invited on a special scavenger hunt!</p>
+    <p>Find clues, scan QR codes, and type secret numbers.</p>
+    <p>When you’re ready…</p>
+    <button onclick="location='?play=${id}&s=0'">▶️ Start the Hunt</button>
+  `;
 }
 
-/* ---------- Play ---------- */
+/* ================== PLAY ================== */
 function play(){
-  const k=q.get("play");
-  const h=hunts[k];
-  const s=parseInt(q.get("s")||0);
-
-  if(s>=h.clues.length){
-    app.innerHTML=`<h2>🎉 Hunt Complete!</h2>`;
+  const h = hunts.find(x=>x.id===q.get("play"));
+  let s = parseInt(q.get("s"));
+  if (s >= h.steps.length) {
+    app.innerHTML = `<h2>🎉 Finished!</h2>`;
     return;
   }
-
-  const c=h.clues[s];
-  app.innerHTML=`
-    <p>${c.clue}</p>
+  const step = h.steps[s];
+  app.innerHTML = `
+    <h2>${step.clue}</h2>
     <input id="ans" placeholder="Enter 6-digit code">
-    <button onclick="check('${c.code}',${s},'${k}')">Submit</button>`;
+    <button onclick="check('${step.code}',${s})">Submit</button>
+  `;
 }
 
-/* ---------- Check ---------- */
-function check(code,s,k){
-  const val=document.getElementById("ans").value;
-  if(val===code){
-    correctOverlay.style.display="flex";
-    setTimeout(()=>{
-      correctOverlay.style.display="none";
-      location=`?play=${k}&s=${s+1}`;
-    },900);
-  }else{
-    wrongOverlay.style.display="flex";
-    document.getElementById("ans").value="";
-    setTimeout(()=>wrongOverlay.style.display="none",1200);
+function check(code, s){
+  const v = document.getElementById("ans").value.trim();
+  if (v === code) {
+    showOverlay("correct");
+    setTimeout(()=>location=`?play=${q.get("play")}&s=${s+1}`,800);
+  } else {
+    showOverlay("wrong");
   }
 }
 
-/* ---------- Print ---------- */
-function printPage(k){
-  const h=hunts[k];
-  app.innerHTML=`
-  <div class="print-page">
-    <h2>${h.name} — Parent Instructions</h2>
-    ${h.clues.map((c,i)=>`
-      <p><strong>Clue ${i+1}:</strong> ${c.clue}</p>
-      <p><strong>Hide QR at:</strong> ${c.location}</p>
-      <p><strong>Unlock Code:</strong> ${c.code}</p>
-      <div id="pqr${i}"></div>
-      <p>Notes: ______________________________</p>
-    `).join("")}
-  </div>
+function showOverlay(type){
+  const el = document.getElementById(type);
+  el.style.display="flex";
+  setTimeout(()=>el.style.display="none",1000);
+}
 
-  <div class="print-page">
-    <h2>Cut-Out QR Codes</h2>
-    <div class="qr-grid">
-      ${h.clues.map((c,i)=>`
-        <div class="qr-item">
-          <div id="cqr${i}"></div>
-          <div>${c.location}</div>
-        </div>`).join("")}
+/* ================== PRINT ================== */
+function printPage(id){
+  const h = hunts.find(x=>x.id===id);
+  app.innerHTML = `
+    <h1>${h.name} – Parent Instructions</h1>
+
+    <div class="print-page">
+      ${h.steps.map((s,i)=>`
+        <div class="print-item">
+          <b>Clue ${i+1}:</b> ${s.clue}<br>
+          <b>Location:</b> ${s.location}<br>
+          <b>Code:</b> ${s.code}<br>
+          <canvas id="pqr${i}"></canvas>
+          <div class="notes"></div>
+        </div>
+      `).join("")}
     </div>
-  </div>`;
 
-  h.clues.forEach((c,i)=>{
-    QRCode.toCanvas(document.getElementById("pqr"+i),c.code,{width:80});
-    QRCode.toCanvas(document.getElementById("cqr"+i),c.code,{width:100});
+    <div class="print-page">
+      <h2>Cut-Out QR Codes</h2>
+      ${h.steps.map((s,i)=>`
+        <div class="print-item">
+          <canvas id="cqr${i}"></canvas>
+        </div>
+      `).join("")}
+    </div>
+
+    <button onclick="window.print()">Print</button>
+  `;
+
+  h.steps.forEach((s,i)=>{
+    QRCode.toCanvas(document.getElementById("pqr"+i), s.code);
+    QRCode.toCanvas(document.getElementById("cqr"+i), s.code);
   });
 }
 </script>
+
 </body>
 </html>
