@@ -79,6 +79,13 @@ input {
 .overlay.correct { background:rgba(0,160,0,0.85); }
 .overlay.wrong { background:rgba(200,0,0,0.85); }
 
+/* CAMERA */
+video {
+  width:260px;
+  border-radius:12px;
+  margin-top:16px;
+}
+
 /* PRINT */
 .print-page { page-break-after:always; }
 .print-item { margin-bottom:20px; }
@@ -111,7 +118,7 @@ input {
 }
 
 @media print {
-  button, .search { display:none; }
+  button, .search, video { display:none; }
 }
 </style>
 </head>
@@ -124,6 +131,7 @@ input {
 <div id="wrong" class="overlay wrong">❌ Try Again</div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 <script src="hunts-source.js"></script>
 
 <script>
@@ -159,7 +167,7 @@ function home(){
   `;
 }
 
-/* ================= INTRO PAGE (RESTORED) ================= */
+/* ================= INTRO PAGE (VERBATIM) ================= */
 function startPage(id){
   const h = hunts.find(x=>x.id===id);
   app.innerHTML = `
@@ -200,13 +208,50 @@ function play(){
   app.innerHTML = `
 <div class="center">
   <h2 style="font-size:26px;font-weight:700">${step.clue}</h2>
+
   <input id="ans" placeholder="Enter code">
   <br>
   <button class="primary" onclick="check('${step.code}',${s})">Submit</button>
+
+  <p><strong>Or scan the QR code:</strong></p>
+  <video id="video" autoplay playsinline></video>
 </div>
 `;
+  startScanner(step.code, s);
 }
 
+/* ================= CAMERA SCANNER ================= */
+function startScanner(expected, s){
+  const video = document.getElementById("video");
+
+  navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } })
+    .then(stream=>{
+      video.srcObject = stream;
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      const scan = () => {
+        if(video.readyState === video.HAVE_ENOUGH_DATA){
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video,0,0);
+          const img = ctx.getImageData(0,0,canvas.width,canvas.height);
+          const qr = jsQR(img.data, canvas.width, canvas.height);
+          if(qr && qr.data === expected){
+            stream.getTracks().forEach(t=>t.stop());
+            show("correct");
+            setTimeout(()=>location='?play='+q.get("play")+'&s='+(s+1),900);
+            return;
+          }
+        }
+        requestAnimationFrame(scan);
+      };
+      scan();
+    });
+}
+
+/* ================= CHECK ================= */
 function check(c,s){
   const v=document.getElementById("ans").value.trim();
   if(v===c){
@@ -221,7 +266,7 @@ function show(id){
   setTimeout(()=>el.style.display="none",1000);
 }
 
-/* ================= PRINT (RESTORED FORMAT) ================= */
+/* ================= PRINT (UNCHANGED) ================= */
 function printPage(id){
   const h = hunts.find(x=>x.id===id);
   const startURL = location.origin + location.pathname + '?start=' + id;
@@ -263,18 +308,9 @@ function printPage(id){
 <button onclick="window.print()">Print</button>
 `;
 
-  QRCode.toCanvas(
-    document.getElementById("introQR"),
-    startURL,
-    { width:260 }
-  );
-
+  QRCode.toCanvas(document.getElementById("introQR"), startURL, { width:260 });
   h.steps.forEach((s,i)=>{
-    QRCode.toCanvas(
-      document.getElementById("cutqr"+i),
-      s.code,
-      { width:120 }
-    );
+    QRCode.toCanvas(document.getElementById("cutqr"+i), s.code, { width:120 });
   });
 }
 </script>
