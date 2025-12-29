@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scavenger Hunt</title>
 
 <style>
@@ -11,27 +11,46 @@ body{font-family:system-ui;background:#f4f6f8;padding:20px}
 .hunt{border:1px solid #ddd;padding:12px;border-radius:8px;margin-bottom:12px}
 button{margin:6px;padding:8px 14px}
 input{width:100%;padding:8px;margin:6px 0}
+
 .overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.6);
-  display:none;align-items:center;justify-content:center;
-  color:#fff;font-size:26px;z-index:999
+  position:fixed;inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  font-weight:bold;
+  z-index:999;
 }
+
+.overlay.wrong{
+  background:rgba(180,0,0,.75);
+  color:#fff;
+}
+
+.overlay.correct{
+  background:rgba(0,150,0,.75);
+  color:#fff;
+}
+
 .print-page{page-break-after:always}
 .qr-grid{display:grid;grid-template-columns:repeat(auto-fill,120px);gap:20px}
 .qr-item{text-align:center;font-size:12px}
+
 @media print{button{display:none}}
 </style>
 </head>
 
 <body>
 <div class="card" id="app"></div>
-<div class="overlay" id="overlay">❌ Wrong code — try again</div>
+
+<div class="overlay wrong" id="wrongOverlay">❌ Wrong code — try again</div>
+<div class="overlay correct" id="correctOverlay">✅ Correct! Moving on…</div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
 <script>
 /* ---------- Utilities ---------- */
-const randCode=()=>Math.floor(100000+Math.random()*900000).toString();
+const genCode=()=>Math.floor(100000+Math.random()*900000).toString();
 
 /* ---------- Base Hunts ---------- */
 const BASE={
@@ -52,7 +71,7 @@ fortnite:{name:"Fortnite IRL",steps:[
 ["Drinks recharge HP.","fridge"],
 ["Shoes hide here.","entrance"],
 ["Tools live here.","garage"],
-["Family chill zone.","lounge"],
+["Family chill zone.","lounge room"],
 ["Sleep to win.","bed"],
 ["Secrets behind doors.","wardrobe"],
 ["Devices recharge.","phone charger"],
@@ -90,7 +109,7 @@ if(!hunts){
       clues:BASE[k].steps.map(s=>({
         clue:s[0],
         location:s[1],
-        code:randCode()
+        code:genCode()
       }))
     };
   }
@@ -120,9 +139,15 @@ function home(){
 /* ---------- Start Page ---------- */
 function start(){
   const k=q.get("start");
+  const h=hunts[k];
   app.innerHTML=`
-  <h2>🎉 You’ve been invited on a Scavenger Hunt!</h2>
-  <p>Scan hidden QR codes, unlock clues, and race to the final prize.</p>
+  <h2>🎉 Welcome to the ${h.name}!</h2>
+  <p>
+    You’ve been invited on a scavenger hunt!  
+    Hidden around the house are secret QR codes.  
+    Find the right place, scan the code, and enter the number to unlock the next clue.
+  </p>
+  <p>Work together, think carefully, and most of all — have fun!</p>
   <button onclick="location='?play=${k}&s=0'">🚀 Start the Hunt</button>`;
 }
 
@@ -144,12 +169,19 @@ function play(){
     <button onclick="check('${c.code}',${s},'${k}')">Submit</button>`;
 }
 
+/* ---------- Check ---------- */
 function check(code,s,k){
-  if(document.getElementById("ans").value===code){
-    location=`?play=${k}&s=${s+1}`;
+  const val=document.getElementById("ans").value;
+  if(val===code){
+    correctOverlay.style.display="flex";
+    setTimeout(()=>{
+      correctOverlay.style.display="none";
+      location=`?play=${k}&s=${s+1}`;
+    },900);
   }else{
-    overlay.style.display="flex";
-    setTimeout(()=>overlay.style.display="none",1500);
+    wrongOverlay.style.display="flex";
+    document.getElementById("ans").value="";
+    setTimeout(()=>wrongOverlay.style.display="none",1200);
   }
 }
 
@@ -163,6 +195,7 @@ function printPage(k){
       <p><strong>Clue ${i+1}:</strong> ${c.clue}</p>
       <p><strong>Hide QR at:</strong> ${c.location}</p>
       <p><strong>Unlock Code:</strong> ${c.code}</p>
+      <div id="pqr${i}"></div>
       <p>Notes: ______________________________</p>
     `).join("")}
   </div>
@@ -172,14 +205,15 @@ function printPage(k){
     <div class="qr-grid">
       ${h.clues.map((c,i)=>`
         <div class="qr-item">
-          <div id="qr${i}"></div>
+          <div id="cqr${i}"></div>
           <div>${c.location}</div>
         </div>`).join("")}
     </div>
   </div>`;
 
   h.clues.forEach((c,i)=>{
-    QRCode.toCanvas(document.getElementById("qr"+i),c.code,{width:100});
+    QRCode.toCanvas(document.getElementById("pqr"+i),c.code,{width:80});
+    QRCode.toCanvas(document.getElementById("cqr"+i),c.code,{width:100});
   });
 }
 </script>
