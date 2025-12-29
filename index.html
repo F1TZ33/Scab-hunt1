@@ -9,7 +9,7 @@
 body { font-family: system-ui, sans-serif; background:#f4f6f8; padding:20px; }
 .card { max-width:900px; margin:auto; background:#fff; padding:20px; border-radius:12px; }
 .hunt { border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px; }
-button { margin:6px 6px 6px 0; padding:10px 16px; font-size:16px; }
+button { margin:6px 6px 6px 0; padding:10px 16px; font-size:15px; }
 input, textarea { width:100%; padding:8px; margin-bottom:10px; }
 
 .overlay {
@@ -36,6 +36,9 @@ input, textarea { width:100%; padding:8px; margin-bottom:10px; }
 <script>
 /* ========= UTIL ========= */
 function uid(){ return Math.random().toString(36).slice(2,9); }
+function nowStamp(){
+  return new Date().toISOString().replace(/[:T]/g,"-").slice(0,16);
+}
 
 /* ========= DEFAULT HUNTS ========= */
 const DEFAULT_HUNTS = {
@@ -112,22 +115,49 @@ const q = new URLSearchParams(location.search);
 const app = document.getElementById("app");
 
 /* ========= ROUTER ========= */
-if(q.get("start")) startPage(q.get("start"));
+if(q.get("duplicate")) duplicateHunt(q.get("duplicate"));
+else if(q.get("start")) startPage(q.get("start"));
 else if(q.get("play")) play();
 else if(q.get("print")) printPage(q.get("print"));
 else home();
 
-/* ========= HOME (Parent only) ========= */
+/* ========= HOME ========= */
 function home(){
 app.innerHTML=`
-<h1>Scavenger Hunts</h1>
+<h1>Scavenger Hunts (Parent)</h1>
+
 ${Object.entries(HUNTS).map(([k,h])=>`
 <div class="hunt">
 <h3>${h.name}</h3>
-<button onclick="location='?print=${k}'">🖨 Print Instructions</button>
+<button onclick="location='?print=${k}'">🖨 Print</button>
+<button onclick="location='?start=${k}'">▶ Start (Test)</button>
+<button onclick="location='?duplicate=${k}'">📄 Duplicate</button>
 </div>
 `).join("")}
 `;
+}
+
+/* ========= DUPLICATE (ONE-SHOT) ========= */
+function duplicateHunt(key){
+const flag = "dup_done_"+key;
+if(sessionStorage.getItem(flag)){
+history.replaceState({}, "", location.pathname);
+return home();
+}
+const original = HUNTS[key];
+if(!original) return home();
+
+const copy = JSON.parse(JSON.stringify(original));
+copy.name += " COPY " + nowStamp();
+const newKey = uid();
+
+userHunts[newKey] = copy;
+HUNTS[newKey] = copy;
+save();
+
+sessionStorage.setItem(flag,"1");
+history.replaceState({}, "", location.pathname);
+home();
 }
 
 /* ========= START PAGE ========= */
@@ -137,20 +167,10 @@ if(!h) return home();
 
 app.innerHTML = `
 <h1>🎉 Welcome, Explorer!</h1>
-<p>
-You have been invited on a <strong>special scavenger hunt</strong>!
-</p>
-<p>
-Around this place are <strong>hidden clues</strong> waiting to be found.
-Each clue will lead you to the next one.
-</p>
-<p>
-You might need to look carefully, think smart,
-scan QR codes, and enter secret numbers.
-</p>
-<p>
-There are no wrong turns — just keep trying!
-</p>
+<p>You have been invited on a <strong>special scavenger hunt</strong>!</p>
+<p>Hidden clues are waiting to be found. Each one leads to the next.</p>
+<p>Look carefully, think smart, scan QR codes, and enter secret numbers.</p>
+<p>There are no wrong turns — just keep trying!</p>
 <button onclick="location='?play=${key}&s=1'">▶️ Start the Hunt</button>
 `;
 }
@@ -162,24 +182,21 @@ const step = parseInt(q.get("s")||0);
 const h = HUNTS[key];
 if(!h) return home();
 
-if(step===0) return startPage(key);
-
 if(step <= h.clues.length){
 const c = h.clues[step-1];
 app.innerHTML = `
 <p><strong>Clue ${step}:</strong></p>
 <p>${c.clue}</p>
 <input id="ans" placeholder="Enter code">
-<button onclick="check('${c.keyword}', '${key}', ${step+1})">Submit</button>
+<button onclick="check('${c.keyword}','${key}',${step+1})">Submit</button>
 `;
 return;
 }
-
 app.innerHTML = `<h2>${h.finish}</h2>`;
 }
 
 /* ========= CHECK ========= */
-function check(correct, key, next){
+function check(correct,key,next){
 const v = document.getElementById("ans").value.trim().toLowerCase();
 if(v === correct){
 location = `?play=${key}&s=${next}`;
