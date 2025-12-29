@@ -43,11 +43,13 @@ button {
   cursor:pointer;
   border:none;
   border-radius:8px;
+  margin-top:10px;
 }
 
 .primary { background:#2ecc71; color:white; }
 .secondary { background:#3498db; color:white; }
 .danger { background:#e74c3c; color:white; }
+.neutral { background:#95a5a6; color:white; }
 
 .clue-item {
   background:#f8fafc;
@@ -58,6 +60,12 @@ button {
 
 .controls button {
   margin-right:6px;
+}
+
+.actions {
+  display:flex;
+  gap:12px;
+  margin-top:24px;
 }
 
 .small {
@@ -109,11 +117,14 @@ button {
     Saving will later generate codes, QR sheets, and PDFs.
   </p>
 
-  <button class="primary" disabled>💾 Save Hunt (disabled for now)</button>
+  <div class="actions">
+    <button class="primary" onclick="saveHunt()">💾 Save Hunt</button>
+    <button class="neutral" onclick="cancel()">↩ Cancel & Return</button>
+  </div>
 </div>
 
 <script>
-/* ===== Load Existing Hunts (read-only) ===== */
+/* ===== Load Existing Hunts ===== */
 const existingHunts = JSON.parse(localStorage.getItem("hunts") || "[]");
 
 const huntSelect = document.getElementById("huntSelect");
@@ -130,7 +141,7 @@ existingHunts.forEach((h, i) => {
   huntSelect.appendChild(opt);
 });
 
-/* Populate clues when hunt selected */
+/* Populate clues */
 huntSelect.addEventListener("change", () => {
   clueSelect.innerHTML = `<option value="">— Select Clue —</option>`;
   clueSelect.disabled = !huntSelect.value;
@@ -141,7 +152,7 @@ huntSelect.addEventListener("change", () => {
   hunt.steps.forEach((s, i) => {
     const opt = document.createElement("option");
     opt.value = i;
-    opt.textContent = `${s.clue}  (${s.location})`;
+    opt.textContent = `${s.clue} (${s.location})`;
     clueSelect.appendChild(opt);
   });
 });
@@ -149,10 +160,8 @@ huntSelect.addEventListener("change", () => {
 /* Add existing clue */
 function addExistingClue(){
   if(!huntSelect.value || !clueSelect.value) return;
-
   const h = existingHunts[huntSelect.value];
   const s = h.steps[clueSelect.value];
-
   workingClues.push({ clue:s.clue, location:s.location });
   render();
 }
@@ -169,7 +178,7 @@ function addCustomClue(){
   render();
 }
 
-/* Render working list */
+/* Render list */
 function render(){
   clueList.innerHTML = "";
   workingClues.forEach((c,i)=>{
@@ -200,6 +209,40 @@ function move(i,dir){
 function removeClue(i){
   workingClues.splice(i,1);
   render();
+}
+
+/* ===== Save Backend ===== */
+function saveHunt(){
+  const name = document.getElementById("huntName").value.trim();
+  if(!name){
+    alert("Please enter a hunt name.");
+    return;
+  }
+  if(workingClues.length === 0){
+    alert("Please add at least one clue.");
+    return;
+  }
+
+  const hunts = JSON.parse(localStorage.getItem("hunts") || "[]");
+
+  const newHunt = {
+    id: Date.now(),
+    name,
+    steps: workingClues.map(c => ({
+      clue: c.clue,
+      location: c.location
+    }))
+  };
+
+  hunts.push(newHunt);
+  localStorage.setItem("hunts", JSON.stringify(hunts));
+
+  window.location.href = "index.html";
+}
+
+/* Cancel */
+function cancel(){
+  window.location.href = "index.html";
 }
 </script>
 
