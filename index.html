@@ -49,9 +49,7 @@ input {
   text-align:center;
 }
 
-.center {
-  text-align:center;
-}
+.center { text-align:center; }
 
 .hunt-card {
   padding:16px;
@@ -67,10 +65,14 @@ input {
   margin:16px 0;
 }
 
+.scanner {
+  margin-top:14px;
+  display:none;
+}
+
 video {
   width:100%;
   max-width:320px;
-  margin-top:14px;
   border-radius:12px;
 }
 
@@ -94,7 +96,7 @@ video {
 .qr-label { font-weight:bold; margin-bottom:6px; }
 
 @media print {
-  button, .search, video { display:none; }
+  button, .search, .scanner { display:none; }
 }
 </style>
 </head>
@@ -107,6 +109,7 @@ video {
 <div id="wrong" class="overlay wrong">❌ Try Again</div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 
 <script>
 /* ================= UTIL ================= */
@@ -195,17 +198,7 @@ else home();
 function home(){
   app.innerHTML = `
     <h1>Scavenger Hunts</h1>
-
     <input class="search" placeholder="Search hunts...">
-
-    <div class="center">
-      <button class="secondary" onclick="location='create-hunt.html'">
-        ➕ Create New Hunt
-      </button>
-    </div>
-
-    <br>
-
     ${hunts.map(h=>`
       <div class="hunt-card">
         <strong>${h.name} (${h.steps.length} steps)</strong><br><br>
@@ -234,11 +227,12 @@ Each clue will lead you to the next one.</p>
 </ul>
 <p>When you’re ready…</p>
 <button class="primary" onclick="location='?play=${id}&s=0'">▶️ Start the Hunt</button>
-</div>
-`;
+</div>`;
 }
 
 /* ================= PLAY ================= */
+let scanStream, scanActive=false;
+
 function play(){
   const h = hunts.find(x=>x.id===q.get("play"));
   const s = parseInt(q.get("s"));
@@ -251,53 +245,62 @@ function play(){
 <div class="center">
   <h2 style="font-size:26px;font-weight:700">${step.clue}</h2>
   <input id="ans" placeholder="Enter 6-digit code">
-  <br>
-  <button class="secondary" onclick="scanQR()">📷 Scan QR Code</button>
-  <br>
+  <button class="secondary" onclick="startScan()">📷 Scan QR Code</button>
+
+  <div class="scanner" id="scanner">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" hidden></canvas>
+    <p>Point camera at QR code</p>
+  </div>
+
   <button class="primary" onclick="check('${step.code}',${s})">Submit</button>
-  <video id="video" hidden></video>
-</div>
-`;
+</div>`;
 }
 
-/* ================= QR SCAN ================= */
-let stream, detector;
+/* ================= QR SCANNER ================= */
+async function startScan(){
+  if(scanActive) return;
+  scanActive = true;
 
-async function scanQR(){
-  if(!('BarcodeDetector' in window)){
-    alert("QR scanning not supported on this device.");
-    return;
-  }
-  detector = new BarcodeDetector({ formats:["qr_code"] });
+  const scanner = document.getElementById("scanner");
   const video = document.getElementById("video");
-  video.hidden = false;
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
 
-  stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
-  video.srcObject = stream;
-  video.play();
+  scanner.style.display = "block";
 
-  requestAnimationFrame(scanFrame);
-}
+  scanStream = await navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:"environment" }
+  });
 
-async function scanFrame(){
-  const video = document.getElementById("video");
-  if(video.readyState === video.HAVE_ENOUGH_DATA){
-    const codes = await detector.detect(video);
-    if(codes.length){
-      document.getElementById("ans").value = codes[0].rawValue;
-      stopScan();
-      return;
+  video.srcObject = scanStream;
+
+  function tick(){
+    if(!scanActive) return;
+    if(video.readyState === video.HAVE_ENOUGH_DATA){
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video,0,0);
+      const img = ctx.getImageData(0,0,canvas.width,canvas.height);
+      const qr = jsQR(img.data,img.width,img.height);
+      if(qr){
+        document.getElementById("ans").value = qr.data;
+        stopScan();
+        return;
+      }
     }
+    requestAnimationFrame(tick);
   }
-  requestAnimationFrame(scanFrame);
+  tick();
 }
 
 function stopScan(){
-  if(stream){
-    stream.getTracks().forEach(t=>t.stop());
-    stream = null;
+  scanActive = false;
+  if(scanStream){
+    scanStream.getTracks().forEach(t=>t.stop());
+    scanStream = null;
   }
-  document.getElementById("video").hidden = true;
+  document.getElementById("scanner").style.display="none";
 }
 
 /* ================= CHECK ================= */
