@@ -214,10 +214,18 @@ function play(){
   <button class="primary" onclick="check('${step.code}',${s})">Submit</button>
 
   <p><strong>Or scan the QR code:</strong></p>
-  <video id="video" autoplay playsinline></video>
+  <button id="startCam" class="secondary">📷 Scan QR Code</button>
+  <br>
+  <video id="video" autoplay playsinline style="display:none;"></video>
 </div>
 `;
-  startScanner(step.code, s);
+
+  document.getElementById("startCam").onclick = () => {
+    document.getElementById("startCam").style.display = "none";
+    const v = document.getElementById("video");
+    v.style.display = "block";
+    startScanner(step.code, s);
+  };
 }
 
 /* ================= CAMERA SCANNER ================= */
